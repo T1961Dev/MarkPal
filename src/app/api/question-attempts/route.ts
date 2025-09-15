@@ -9,7 +9,9 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerSupabaseClient(request);
+    const authHeader = request.headers.get('authorization');
+    const accessToken = authHeader?.replace('Bearer ', '');
+    const supabase = createServerSupabaseClient(accessToken);
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -59,7 +61,9 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerSupabaseClient(request);
+    const authHeader = request.headers.get('authorization');
+    const accessToken = authHeader?.replace('Bearer ', '');
+    const supabase = createServerSupabaseClient(accessToken);
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -90,7 +94,9 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createServerSupabaseClient(request);
+    const authHeader = request.headers.get('authorization');
+    const accessToken = authHeader?.replace('Bearer ', '');
+    const supabase = createServerSupabaseClient(accessToken);
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
