@@ -1,26 +1,439 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Updated color system to use proportional shades of #007AFF throughout */
+  --background: oklch(0.98 0.005 240); /* Very light blue tint #fafbff */
+  --foreground: oklch(0.25 0.02 240); /* Dark blue-gray #1a1f36 */
+  --card: oklch(0.99 0.003 240); /* Almost white with blue tint #fdfdff */
+  --card-foreground: oklch(0.25 0.02 240); /* Dark blue-gray on cards */
+  --popover: oklch(0.99 0.003 240); /* Almost white with blue tint */
+  --popover-foreground: oklch(0.25 0.02 240); /* Dark blue-gray on popovers */
+  --primary: oklch(0.55 0.15 240); /* #007AFF main accent */
+  --primary-foreground: oklch(1 0 0); /* White on primary */
+  --secondary: oklch(0.92 0.02 240); /* Light blue background #e8f0ff */
+  --secondary-foreground: oklch(0.35 0.08 240); /* Medium blue text */
+  --muted: oklch(0.95 0.01 240); /* Very light blue muted #f0f4ff */
+  --muted-foreground: oklch(0.45 0.05 240); /* Medium blue-gray text */
+  --accent: oklch(0.55 0.15 240); /* #007AFF accent */
+  --accent-foreground: oklch(1 0 0); /* White on accent */
+  --destructive: oklch(0.55 0.2 20); /* #ff3b30 red for errors */
+  --destructive-foreground: oklch(1 0 0); /* White on destructive */
+  --border: oklch(0.88 0.015 240); /* Light blue-gray borders #d1ddf7 */
+  --input: oklch(0.96 0.01 240); /* Light blue-gray inputs for better visibility */
+  --ring: oklch(0.55 0.15 240 / 0.5); /* Blue focus ring */
+  --chart-1: oklch(0.55 0.15 240); /* #007AFF */
+  --chart-2: oklch(0.7 0.15 140); /* Green for success */
+  --chart-3: oklch(0.55 0.2 20); /* Red for errors */
+  --chart-4: oklch(0.65 0.12 60); /* Orange for warnings */
+  --chart-5: oklch(0.45 0.12 240); /* Darker blue variant */
+  --radius: 1rem; /* Rounded for playful feel */
+  --sidebar: oklch(0.99 0.003 240);
+  --sidebar-foreground: oklch(0.25 0.02 240);
+  --sidebar-primary: oklch(0.55 0.15 240);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.92 0.02 240);
+  --sidebar-accent-foreground: oklch(0.35 0.08 240);
+  --sidebar-border: oklch(0.88 0.015 240);
+  --sidebar-ring: oklch(0.55 0.15 240 / 0.5);
+}
+
+.dark {
+  /* Updated dark mode to use proportional dark blue shades */
+  --background: oklch(0.08 0.01 240); /* Very dark blue #0a0d1a */
+  --foreground: oklch(0.95 0.005 240); /* Light blue-white */
+  --card: oklch(0.12 0.015 240); /* Dark blue cards #141829 */
+  --card-foreground: oklch(0.95 0.005 240); /* Light blue-white on cards */
+  --popover: oklch(0.12 0.015 240); /* Dark blue popovers */
+  --popover-foreground: oklch(0.95 0.005 240); /* Light blue-white on popovers */
+  --primary: oklch(0.6 0.15 240); /* Brighter #007AFF for dark mode */
+  --primary-foreground: oklch(1 0 0); /* White on primary */
+  --secondary: oklch(0.18 0.03 240); /* Medium dark blue #1f2437 */
+  --secondary-foreground: oklch(0.85 0.02 240); /* Light blue text */
+  --muted: oklch(0.15 0.02 240); /* Dark blue muted #171d2e */
+  --muted-foreground: oklch(0.65 0.03 240); /* Medium light blue text */
+  --accent: oklch(0.6 0.15 240); /* Brighter #007AFF accent */
+  --accent-foreground: oklch(1 0 0); /* White on accent */
+  --destructive: oklch(0.6 0.2 20); /* Brighter red for dark mode */
+  --destructive-foreground: oklch(1 0 0); /* White on destructive */
+  --border: oklch(0.22 0.025 240); /* Dark blue borders #252b42 */
+  --input: oklch(0.15 0.02 240); /* Dark blue inputs */
+  --ring: oklch(0.6 0.15 240 / 0.5); /* Blue focus ring */
+  --chart-1: oklch(0.6 0.15 240); /* Brighter #007AFF */
+  --chart-2: oklch(0.7 0.15 140); /* Green */
+  --chart-3: oklch(0.6 0.2 20); /* Red */
+  --chart-4: oklch(0.75 0.15 60); /* Orange */
+  --chart-5: oklch(0.5 0.12 240); /* Darker blue variant */
+  --sidebar: oklch(0.08 0.01 240);
+  --sidebar-foreground: oklch(0.95 0.005 240);
+  --sidebar-primary: oklch(0.6 0.15 240);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.18 0.03 240);
+  --sidebar-accent-foreground: oklch(0.85 0.02 240);
+  --sidebar-border: oklch(0.22 0.025 240);
+  --sidebar-ring: oklch(0.6 0.15 240 / 0.5);
 }
 
 @theme inline {
+  --font-sans: var(--font-inter);
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground overflow-x-hidden;
+  }
+  html {
+    overflow-x: hidden;
+  }
+
+  /* Add cursor pointer to all buttons */
+  button {
+    cursor: pointer;
+  }
+
+  /* Ensure disabled buttons show not-allowed cursor */
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Prevent horizontal scrolling on slide containers */
+  .slide-container {
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    overflow-x: hidden !important;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  /* Hide scrollbar for webkit browsers */
+  .slide-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Prevent manual scrolling on slides */
+  .slide {
+    scroll-snap-align: start;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+
+  /* Prevent horizontal scrolling globally */
+  body {
+    overflow-x: hidden !important;
+  }
+
+  /* Prevent horizontal scrolling on main containers */
+  .overflow-hidden {
+    overflow-x: hidden !important;
+  }
+
+  /* Disable horizontal scroll on transform containers */
+  .flex.transition-transform {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent manual scrolling on the main container */
+  .min-h-screen.bg-background {
+    overflow-x: hidden !important;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Simplified utility classes using standard Tailwind colors instead of custom properties */
+@layer utilities {
+  .btn-3d {
+    @apply shadow-lg hover:shadow-xl active:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0;
+  }
+
+  .highlight-success {
+    @apply bg-green-100 dark:bg-green-900/30 rounded-md px-1;
+  }
+
+  .highlight-warning {
+    @apply bg-yellow-100 dark:bg-yellow-900/30 rounded-md px-1 cursor-help;
+  }
+
+  .highlight-error {
+    @apply bg-red-100 dark:bg-red-900/30 rounded-md px-1 cursor-help;
+  }
+
+  .card-hover {
+    @apply hover:shadow-lg hover:translate-y-1 hover:scale-105 transition-all duration-300;
+  }
+
+  .slide-container {
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+  }
+
+  .slide {
+    scroll-snap-align: start;
+  }
+
+  /* Enhanced 3D button effects using only valid Tailwind shadow utilities */
+  .btn-3d-enhanced {
+    @apply shadow-2xl hover:shadow-2xl active:shadow-lg transition-all duration-300 hover:-translate-y-1 active:translate-y-0 hover:scale-105 active:scale-95;
+    transform-style: preserve-3d;
+    filter: drop-shadow(0 25px 25px rgb(0 0 0 / 0.15));
+  }
+
+  .btn-3d-enhanced:hover {
+    filter: drop-shadow(0 35px 35px rgb(0 0 0 / 0.25));
+  }
+
+  /* Playful bounce animation for icons */
+  .bounce-gentle {
+    animation: bounce-gentle 2s infinite;
+  }
+
+  @keyframes bounce-gentle {
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-10px);
+    }
+    60% {
+      transform: translateY(-5px);
+    }
+  }
+
+  /* Slide entrance animations */
+  .slide-in-from-bottom-10 {
+    animation: slide-in-from-bottom 0.7s ease-out;
+  }
+
+  @keyframes slide-in-from-bottom {
+    from {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Progress indicator pulse */
+  .progress-pulse {
+    animation: progress-pulse 2s infinite;
+  }
+
+  @keyframes progress-pulse {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.1);
+      opacity: 0.8;
+    }
+  }
+
+  /* Floating navigation buttons using only valid shadow utilities */
+  .nav-float {
+    backdrop-filter: blur(12px);
+    @apply bg-background/90 border border-border/50 shadow-xl transition-all duration-300;
+    filter: drop-shadow(0 20px 25px rgb(0 0 0 / 0.15));
+  }
+
+  .nav-float:hover {
+    filter: drop-shadow(0 25px 30px rgb(0 0 0 / 0.25));
+  }
+
+  /* Enhanced card effects for slideshow */
+  .card-slideshow {
+    @apply hover:shadow-2xl hover:translate-y-2 transition-all duration-500 hover:scale-[1.05];
+    transform-style: preserve-3d;
+  }
+
+  /* Gradient text effect */
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Sparkle animation for feedback */
+  .sparkle-spin {
+    animation: sparkle-spin 3s linear infinite;
+  }
+
+  @keyframes sparkle-spin {
+    0% {
+      transform: rotate(0deg) scale(1);
+    }
+    25% {
+      transform: rotate(90deg) scale(1.1);
+    }
+    50% {
+      transform: rotate(180deg) scale(1);
+    }
+    75% {
+      transform: rotate(270deg) scale(1.1);
+    }
+    100% {
+      transform: rotate(360deg) scale(1);
+    }
+  }
+
+  /* Accent button drop shadow effect */
+  .accent-shadow {
+    box-shadow: 0 2px 0 rgba(0, 41, 102, 0.8);
+  }
+
+  .accent-shadow:hover {
+    box-shadow: 0 4px 0 rgba(0, 41, 102, 0.9);
+  }
+
+  /* Button hover border effects */
+  .btn-hover-border {
+    border-bottom: 1.5px solid transparent;
+    transition: border-bottom-color 0.2s ease;
+  }
+
+  .btn-hover-border:hover {
+    border-bottom-color: hsl(var(--primary));
+  }
+
+  /* Accent button hover border */
+  .accent-btn-hover {
+    transition: border-color 0.2s ease;
+  }
+
+  .accent-btn-hover:hover {
+    border-color: hsl(var(--primary));
+  }
+
+  /* Line clamp utilities */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  /* Live mode animations */
+  .live-highlight-pulse {
+    animation: live-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes live-pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.05);
+    }
+  }
+
+  .live-feedback-slide-in {
+    animation: live-slide-in 0.5s ease-out;
+  }
+
+  @keyframes live-slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .live-score-update {
+    animation: live-score-update 0.3s ease-out;
+  }
+
+  @keyframes live-score-update {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
