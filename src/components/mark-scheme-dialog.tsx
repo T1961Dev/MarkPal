@@ -236,13 +236,13 @@ export function MarkSchemeDialog({
                       <div className="col-span-3 text-gray-700">
                         <span className={cn(
                           "text-xs",
-                          point.extraInfo.trim().toLowerCase().startsWith('do not accept') 
+                          point.extraInfo?.trim().toLowerCase().startsWith('do not accept') 
                             ? "font-semibold text-red-700" 
-                            : point.extraInfo.trim().toLowerCase().startsWith('allow')
+                            : point.extraInfo?.trim().toLowerCase().startsWith('allow')
                             ? "text-green-700"
                             : "text-gray-600"
                         )}>
-                          {point.extraInfo.trim()}
+                          {point.extraInfo?.trim() || ''}
                         </span>
                       </div>
                       <div className="col-span-1 text-center font-semibold text-gray-900">
