@@ -12,7 +12,7 @@ interface QuestionBankLiveInputProps {
   onAnalysis: (text: string) => void
   highlights: Array<{
     text: string;
-    type: "success" | "warning" | "error";
+    type: "success" | "warning" | "error" | "missing";
     tooltip?: string;
   }>
   isLoading: boolean

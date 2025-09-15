@@ -29,7 +29,7 @@ interface MarkSchemeLevel {
 
 interface TextHighlight {
   text: string
-  type: "success" | "warning" | "missing"
+  type: "success" | "warning" | "error"
   start: number
   end: number
   tooltip?: string
