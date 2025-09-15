@@ -368,7 +368,8 @@ export default function MarkSchemeCoach() {
           improvements: [],
           missingPoints: []
         },
-        detailed_feedback: feedbackResult.detailedFeedback || ""
+        detailed_feedback: feedbackResult.detailedFeedback || "",
+        version_number: 1
       })
       
       setSaveDialogOpen(false)
