@@ -397,7 +397,13 @@ export default function MarkSchemeCoach() {
     }
   }
 
-  const handleQuestionsExtracted = (questions: any[], fullText: string, metadata?: any) => {
+  const handleQuestionsExtracted = (questions: Array<{
+    id: string;
+    questionNumber: string;
+    text: string;
+    marks: number | null;
+    type: string;
+  }>, fullText: string, metadata?: Record<string, unknown>) => {
     setExtractedQuestions(questions)
     setPdfFullText(fullText)
     // You can add additional logic here to process the extracted questions

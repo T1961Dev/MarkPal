@@ -36,8 +36,17 @@ interface QuestionAttempt {
   student_answer?: string;
   score?: number;
   max_score?: number;
-  highlights: any[];
-  analysis: any;
+  highlights: Array<{
+    text: string;
+    type: "success" | "warning" | "error";
+    tooltip?: string;
+  }>;
+  analysis: {
+    strengths: string[];
+    weaknesses: string[];
+    improvements: string[];
+    missingPoints: string[];
+  };
   detailed_feedback: string;
   is_saved: boolean;
 }

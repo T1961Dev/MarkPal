@@ -10,7 +10,11 @@ interface QuestionBankLiveInputProps {
   value: string
   onChange: (value: string) => void
   onAnalysis: (text: string) => void
-  highlights: any[]
+  highlights: Array<{
+    text: string;
+    type: "success" | "warning" | "error";
+    tooltip?: string;
+  }>
   isLoading: boolean
   placeholder?: string
   onSave?: () => void

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AnswerHighlight {
@@ -105,7 +106,7 @@ export function AnswerHighlighter({ answerText, highlights }: AnswerHighlighterP
     });
 
     // Build the JSX with highlights
-    const elements: JSX.Element[] = [];
+    const elements: React.ReactElement[] = [];
     let lastIndex = 0;
 
     mergedRanges.forEach((range, index) => {
