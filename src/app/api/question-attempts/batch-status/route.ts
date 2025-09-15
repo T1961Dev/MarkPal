@@ -29,7 +29,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Batch fetch attempt statuses for all questions
-    const attemptStatuses: Record<string, any> = {};
+    const attemptStatuses: Record<string, {
+      hasAttempted: boolean;
+      attemptCount: number;
+      latestAttempt?: {
+        id: string;
+        score?: number;
+        max_score?: number;
+        created_at: string;
+      };
+    }> = {};
     
     // Use Promise.all to fetch all statuses in parallel
     const statusPromises = questionIds.map(async (questionId: string) => {

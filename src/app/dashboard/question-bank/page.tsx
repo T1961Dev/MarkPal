@@ -61,7 +61,16 @@ export default function QuestionBank() {
     level: '',
     difficulty: ''
   })
-  const [attemptStatuses, setAttemptStatuses] = useState<Record<string, any>>({})
+  const [attemptStatuses, setAttemptStatuses] = useState<Record<string, {
+    hasAttempted: boolean;
+    attemptCount: number;
+    latestAttempt?: {
+      id: string;
+      score?: number;
+      max_score?: number;
+      created_at: string;
+    };
+  }>>({})
 
   // Redirect if not logged in
   useEffect(() => {
@@ -134,7 +143,10 @@ export default function QuestionBank() {
       } else {
         console.error('Batch attempt status failed:', data.error)
         // Set default empty statuses to prevent individual API calls
-        const defaultStatuses: Record<string, any> = {}
+        const defaultStatuses: Record<string, {
+          hasAttempted: boolean;
+          attemptCount: number;
+        }> = {}
         questionIds.forEach(id => {
           defaultStatuses[id] = { hasAttempted: false, attemptCount: 0 }
         })

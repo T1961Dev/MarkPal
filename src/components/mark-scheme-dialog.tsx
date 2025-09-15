@@ -40,9 +40,9 @@ export function MarkSchemeDialog({
   }
 
   // Parse the mark scheme text into structured data
-  const parseMarkScheme = (markSchemeText: string): MarkSchemePoint[] => {
+  const parseMarkScheme = (markSchemeText: string): { points: MarkSchemePoint[]; extraInfo: string[] } => {
     if (!markSchemeText.trim()) {
-      return []
+      return { points: [], extraInfo: [] }
     }
 
     const points: MarkSchemePoint[] = []
