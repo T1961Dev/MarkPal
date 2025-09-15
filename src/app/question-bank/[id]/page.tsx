@@ -229,7 +229,7 @@ export default function QuestionPage() {
         },
         detailed_feedback: markingResult.feedback || "",
         question_id: question.id,
-        attempt_id: currentAttemptId,
+        attempt_id: currentAttemptId || undefined,
         version_number: versionNumber
       });
       

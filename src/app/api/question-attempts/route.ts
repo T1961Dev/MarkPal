@@ -34,9 +34,9 @@ export async function POST(request: NextRequest) {
     const attemptData = {
       user_id: user.id,
       question_id,
-      student_answer: student_answer || null,
-      score: score || null,
-      max_score: max_score || null,
+      student_answer: student_answer || undefined,
+      score: score || undefined,
+      max_score: max_score || undefined,
       highlights: highlights || [],
       analysis: analysis || { strengths: [], weaknesses: [], improvements: [], missingPoints: [] },
       detailed_feedback: detailed_feedback || '',
