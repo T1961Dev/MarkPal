@@ -140,7 +140,7 @@ export default function Dashboard() {
               Welcome back, {(userData?.fullName || user?.email?.split('@')[0] || "Student").split(' ')[0]}! 👋
             </h1>
             <p className="text-muted-foreground mt-2">
-              Ready to improve your exam technique? Let's get started.
+              Ready to improve your exam technique? Let&apos;s get started.
             </p>
           </div>
           <div className="flex items-center gap-2">

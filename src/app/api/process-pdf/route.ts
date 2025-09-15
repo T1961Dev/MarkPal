@@ -193,7 +193,7 @@ Classify by type: essay (detailed analysis), short-answer (brief responses), mul
     // Clean markdown code blocks
     responseText = responseText.replace(/^```json\s*|\s*```$/g, "").trim();
 
-    let extractedQuestions = JSON.parse(responseText);
+    const extractedQuestions = JSON.parse(responseText);
     if (!Array.isArray(extractedQuestions)) throw new Error("Invalid response format from OpenAI");
 
     const cleanedQuestions = extractedQuestions

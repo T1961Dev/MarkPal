@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { stripe } from '@/lib/stripe'
 import { createAdminSupabaseClient, getQuestionLimit } from '@/lib/supabase'
 
@@ -20,7 +21,6 @@ export default async function Success({
   try {
     const {
       status,
-      customer_details,
       customer,
       metadata,
     } = await stripe.checkout.sessions.retrieve(session_id, {
@@ -86,12 +86,12 @@ export default async function Success({
                   You now have {questionLimit} questions per month.
                 </p>
               </div>
-              <a
+              <Link
                 href="/"
                 className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
               >
                 Continue to App
-              </a>
+              </Link>
             </div>
           </div>
         </div>
