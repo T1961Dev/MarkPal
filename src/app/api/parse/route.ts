@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as pdfjsLib from "pdfjs-dist";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
 
 // Required by pdfjs-dist in Node
-import { GlobalWorkerOptions } from "pdfjs-dist";
+import { GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf";
 GlobalWorkerOptions.workerSrc = "pdfjs-dist/build/pdf.worker.min.js";
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string[]> {
