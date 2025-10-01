@@ -78,6 +78,7 @@ export default function Practice() {
   const [userData, setUserData] = useState<UserType | null>(null)
   const [pricingPopupOpen, setPricingPopupOpen] = useState(false)
   const [isLiveMode, setIsLiveMode] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (user) {
@@ -89,10 +90,13 @@ export default function Practice() {
     if (!user) return
     
     try {
+      setLoading(true)
       const data = await getUser(user.id)
       setUserData(data)
     } catch (error) {
       console.error('Error loading user data:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -299,7 +303,7 @@ export default function Practice() {
         },
         detailed_feedback: feedbackResult.detailedFeedback || "",
         version_number: 1
-      })
+      }, session?.access_token)
       
       setSaveDialogOpen(false)
       
@@ -404,9 +408,13 @@ export default function Practice() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">
-              {userData?.questionsLeft || 0} questions left
-            </Badge>
+            {userData ? (
+              <Badge variant="secondary" className="flex items-center">
+                {userData.tier === 'pro+' ? <><span className="text-xl">∞</span> <span className="ml-1">questions left</span></> : `${userData.questionsLeft} questions left`}
+              </Badge>
+            ) : (
+              <div className="h-6 w-24 bg-muted rounded animate-pulse"></div>
+            )}
           </div>
         </div>
 

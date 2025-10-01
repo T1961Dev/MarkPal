@@ -6,24 +6,29 @@ import { getUser, getQuestionLimit, User } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
-export function QuestionsProgress() {
-  const { user } = useAuth()
-  const [userData, setUserData] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+interface QuestionsProgressProps {
+  userData: User | null
+}
 
+export function QuestionsProgress({ userData }: QuestionsProgressProps) {
+  const { user } = useAuth()
+  const [localUserData, setLocalUserData] = useState<User | null>(userData)
+
+  // Update local state when prop changes
   useEffect(() => {
-    if (user) {
-      loadUserData()
-    } else {
-      setLoading(false)
-    }
-  }, [user])
+    setLocalUserData(userData)
+  }, [userData])
 
   // Refresh user data when questions are used
   useEffect(() => {
-    const handleQuestionsUsed = () => {
+    const handleQuestionsUsed = async () => {
       if (user) {
-        loadUserData()
+        try {
+          const data = await getUser(user.id)
+          setLocalUserData(data)
+        } catch (error) {
+          console.error('Error refreshing user data:', error)
+        }
       }
     }
 
@@ -31,29 +36,23 @@ export function QuestionsProgress() {
     return () => window.removeEventListener('questionsUsed', handleQuestionsUsed)
   }, [user])
 
-  const loadUserData = async () => {
-    if (!user) return
-    
-    try {
-      const data = await getUser(user.id)
-      setUserData(data)
-    } catch (error) {
-      console.error('Error loading user data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (!user || loading) {
+  if (!user) {
     return null
   }
 
-  if (!userData) {
-    return null
+  if (!localUserData) {
+    return (
+      <div className="flex items-center gap-2 min-w-[120px]">
+        <div className="h-2 w-16 bg-muted rounded animate-pulse"></div>
+        <span className="text-xs font-medium text-muted-foreground">
+          Loading...
+        </span>
+      </div>
+    )
   }
 
-  const questionLimit = getQuestionLimit(userData.tier)
-  const questionsUsed = questionLimit - userData.questionsLeft
+  const questionLimit = getQuestionLimit(localUserData.tier)
+  const questionsUsed = questionLimit - localUserData.questionsLeft
   const percentage = Math.round((questionsUsed / questionLimit) * 100)
 
   return (
@@ -65,8 +64,8 @@ export function QuestionsProgress() {
                value={percentage} 
                className="h-2 w-16 bg-muted"
              />
-             <span className="text-xs font-medium text-muted-foreground">
-               {questionsUsed}/{questionLimit} questions used
+             <span className="text-xs font-medium text-muted-foreground flex items-center">
+               {questionsUsed}/{localUserData?.tier === 'pro+' ? <><span className="text-lg">∞</span> <span className="ml-1">questions used</span></> : `${questionLimit} questions used`}
              </span>
            </div>
          </TooltipTrigger>
@@ -75,8 +74,9 @@ export function QuestionsProgress() {
              {questionsUsed} questions used
              <br />
              <span className="text-xs text-muted-foreground">
-               {userData.tier === 'free' ? 'Free plan' : 
-                userData.tier === 'basic' ? 'Basic plan' : 'Pro plan'}
+               {localUserData.tier === 'free' ? 'Free plan' : 
+                localUserData.tier === 'basic' ? 'Basic plan' : 
+                localUserData.tier === 'pro' ? 'Pro plan' : 'Pro+ plan'}
              </span>
            </p>
          </TooltipContent>

@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
+    const paperId = formData.get("paperId") as string;
 
     if (!file) {
       return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
@@ -206,36 +207,8 @@ Classify by type: essay (detailed analysis), short-answer (brief responses), mul
       }))
       .filter(q => q.text.length > 10);
 
-    // Auto-add questions to question bank
-    try {
-      const supabase = createAdminSupabaseClient();
-      
-      // Determine subject from filename or content
-      const subject = determineSubject(file.name, fullText);
-      
-      // Add each question to the question bank
-      for (const question of cleanedQuestions) {
-        if (question.text && question.marks) {
-          await supabase
-            .from('questions')
-            .insert({
-              question: question.text,
-              subject: subject,
-              topic: 'General', // Default topic, can be improved later
-              level: 'mixed', // Default level
-              marks: parseInt(question.marks) || 1,
-              mark_scheme: `Mark scheme for ${question.marks} mark question.`, // Placeholder
-              question_type: question.type,
-              difficulty: 'medium' // Default difficulty
-            });
-        }
-      }
-      
-      console.log(`Added ${cleanedQuestions.length} questions to question bank`);
-    } catch (error) {
-      console.error('Error adding questions to question bank:', error);
-      // Don't fail the main request if question bank addition fails
-    }
+    // Note: Questions are NOT automatically saved to question bank here
+    // They will be saved later after mark scheme processing is complete
 
     return NextResponse.json({
       success: true,

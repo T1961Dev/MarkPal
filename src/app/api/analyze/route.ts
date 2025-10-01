@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { getUser, decrementQuestionsLeft } from '@/lib/supabase';
+import { getUser, decrementQuestionsLeft, updateUserStreak } from '@/lib/supabase';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -116,14 +116,33 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "system",
-          content: `You are an expert examiner. Mark strictly against the provided mark scheme. 
+          content: `You are an expert examiner. Mark STRICTLY against the provided mark scheme. 
 
-MARKING RULES:
-• POSITIVE MARKING: Award marks for correct content, don't deduct for irrelevant content
-• UNDERLINED TERMS: Must be exact matches (no synonyms)
-• NON-UNDERLINED TERMS: Accept GCSE-level synonyms if meaning correct
-• "DO NOT ACCEPT" rules: Strictly reject listed phrases
-• CHAINS OF REASONING: Award marks only when reasoning is complete
+CRITICAL MARKING RULES:
+• Award marks ONLY for content that EXACTLY matches the mark scheme
+• UNDERLINED TERMS: Must be exact matches (no synonyms, no paraphrasing)
+• NON-UNDERLINED TERMS: Accept GCSE-level synonyms ONLY if meaning is correct
+• "DO NOT ACCEPT" rules: Strictly reject listed phrases - no exceptions
+• PARTIAL CORRECTNESS: Just because half the answer is partially correct does NOT mean they get 50% of the marks
+• BE STRICT: Look at the mark scheme carefully - each mark point must be fully satisfied
+• NO GENEROUS MARKING: Only award marks for complete, correct answers that match the scheme
+
+MARK SCHEME STRUCTURE RULES:
+• EACH BULLET POINT IS COMPLETE: Each numbered point in the mark scheme is a complete, self-contained answer
+• NO PICK AND MIX: Students CANNOT combine parts from different bullet points to create a valid answer
+• STATEMENT + REASON MUST MATCH: If a bullet point has both a statement and reason, BOTH must be from the SAME bullet point
+• VAGUE PHRASES = NO MARK: If a student uses vague language that could apply to multiple points, do NOT award the mark
+• EXAM STANDARD: Mark as if this were a real exam - be as strict as real examiners
+
+SPECIFIC EXAMPLES:
+• If mark scheme says "flexible membrane allows squeezing through capillaries" and student says "squeeze into tight spaces" - this is VAGUE and gets NO MARK
+• If mark scheme says "biconcave shape increases surface area" and student says "large surface area" - this is INCOMPLETE and gets NO MARK
+• If mark scheme says "no nucleus allows more space for haemoglobin" and student says "no nucleus so it can squeeze" - this mixes two different points and gets NO MARK
+
+NO CONNECTING DOTS: Do NOT award marks by connecting separate parts of an answer to form a complete point
+SPECIFIC TERMS REQUIRED: If a mark scheme requires specific terms (e.g., "flexible membrane"), the student must use those exact terms or clear synonyms
+NO INFERENCE: Do not award marks for what the student "probably meant" - only award for what they actually wrote
+CHAINS OF REASONING: Award marks only when reasoning is complete and matches the scheme
 
 HIGHLIGHTING REQUIREMENTS:
 • Find specific words/phrases in the student's answer that match mark scheme points
@@ -132,6 +151,13 @@ HIGHLIGHTING REQUIREMENTS:
 • Use "error" for incorrect or missing key terms
 • Highlight EXACT text from the student's answer (not paraphrased)
 • Provide brief tooltip explanations for each highlight
+
+GRANULAR HIGHLIGHTING RULES:
+• HIGHLIGHT EACH PART SEPARATELY: If a student writes "no nucleus so it can squeeze", highlight "no nucleus" as success (green) and "so it can squeeze" as error (red)
+• CORRECT STATEMENT + WRONG REASON: Award mark for correct statement, but highlight the wrong reason as error
+• MIXED SENTENCES: Break down sentences into correct and incorrect parts for separate highlighting
+• PRECISE WORD MATCHING: Only highlight words that exactly match the mark scheme requirements
+• NO BLANKET HIGHLIGHTING: Don't highlight entire sentences as one color - be specific about what's right and wrong
 
 FEEDBACK REQUIREMENTS:
 • Make ALL feedback actionable with specific bullet points
@@ -187,9 +213,10 @@ Return JSON: {
       };
     }
 
-               // Decrement questions left for the user
+               // Decrement questions left and update streak for the user
       if (userId) {
         await decrementQuestionsLeft(userId, accessToken);
+        await updateUserStreak(userId, accessToken);
       }
 
      return NextResponse.json({

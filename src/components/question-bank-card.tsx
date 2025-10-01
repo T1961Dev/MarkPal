@@ -68,12 +68,11 @@ export function QuestionBankCard({ question, getDifficultyColor, getLevelColor, 
       const { data: { session } } = await supabase.auth.getSession()
       
       // Use a more efficient endpoint that only returns what we need
-      const response = await fetch(`/api/questions/${question.id}/attempt-status`, {
+      const response = await fetch(`/api/questions/${question.id}/attempt-status?t=${Date.now()}`, {
         headers: {
           ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
         },
-        cache: 'force-cache', // Cache the response
-        next: { revalidate: 60 } // Revalidate every 60 seconds
+        cache: 'no-store' // Always fetch fresh attempt status
       })
       const data = await response.json()
       

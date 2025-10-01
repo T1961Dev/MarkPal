@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { question, subject, topic, level, marks, mark_scheme, question_type, difficulty } = body;
+    const { question, subject, topic, level, marks, mark_scheme, question_type, difficulty, paper_id, is_from_paper } = body;
 
     // Validate required fields
     if (!question || !subject || !topic || !level || !marks || !mark_scheme || !question_type || !difficulty) {
@@ -88,7 +88,9 @@ export async function POST(request: NextRequest) {
         marks: parseInt(marks),
         mark_scheme,
         question_type,
-        difficulty
+        difficulty,
+        paper_id: paper_id || null,
+        is_from_paper: is_from_paper || false
       })
       .select()
       .single();

@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Get user email from Supabase
+    // Get user email and current subscription from Supabase
     const supabase = createAdminSupabaseClient()
     const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId)
     
@@ -35,6 +35,39 @@ export async function POST(request: Request) {
         { error: 'Unable to fetch user email' },
         { status: 400 }
       )
+    }
+
+    // Get user's current subscription info
+    const { data: user, error: userFetchError } = await supabase
+      .from('users')
+      .select('tier, stripe_customer_id')
+      .eq('id', userId)
+      .single()
+
+    if (userFetchError) {
+      console.error('Error fetching user subscription:', userFetchError)
+      return NextResponse.json(
+        { error: 'Unable to fetch user subscription' },
+        { status: 400 }
+      )
+    }
+
+    // Store existing subscription info for later cancellation after successful payment
+    let existingSubscriptionIds: string[] = []
+    if (user.stripe_customer_id && user.tier !== 'free') {
+      try {
+        // Get existing subscriptions for the customer
+        const existingSubscriptions = await stripe.subscriptions.list({
+          customer: user.stripe_customer_id,
+          status: 'active'
+        })
+
+        // Store subscription IDs to cancel after successful payment
+        existingSubscriptionIds = existingSubscriptions.data.map(sub => sub.id)
+      } catch (error) {
+        console.error('Error fetching existing subscriptions:', error)
+        // Continue with new subscription creation
+      }
     }
 
     // Create Checkout Session
@@ -51,6 +84,7 @@ export async function POST(request: Request) {
       metadata: {
         userId: userId,
         tier: tier,
+        existingSubscriptionIds: JSON.stringify(existingSubscriptionIds),
       },
       customer_email: userData.user.email,
     })

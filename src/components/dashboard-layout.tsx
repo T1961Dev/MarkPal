@@ -36,19 +36,28 @@ import {
   BarChart3,
   HelpCircle,
   Menu,
+  Upload,
 } from "lucide-react"
 import { ProfileDropdown } from "./profile-dropdown"
 import { ProfileSettingsDialog } from "./profile-settings-dialog"
 import { QuestionsProgress } from "./questions-progress"
 import { PricingPopup } from "./pricing-popup"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { getUser, User as UserType, checkAndResetUserQuestions } from "@/lib/supabase"
 import { useEffect, useCallback } from "react"
+import { dataSync } from "@/lib/data-sync"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
 }
 
-const navigationItems = [
+interface NavigationItem {
+  title: string
+  url: string
+  icon: any
+}
+
+const navigationItems: NavigationItem[] = [
   {
     title: "Dashboard",
     url: "/dashboard",
@@ -63,6 +72,11 @@ const navigationItems = [
     title: "Upload Question",
     url: "/dashboard/practice",
     icon: Target,
+  },
+  {
+    title: "Exam Paper Upload",
+    url: "/exam-upload",
+    icon: Upload,
   },
   {
     title: "Saved Questions",
@@ -111,6 +125,40 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }, [user, session, loadUserData])
 
+  // Refresh data when questions are used
+  useEffect(() => {
+    const handleQuestionsUsed = () => {
+      if (user && session) {
+        loadUserData()
+      }
+    }
+    
+    // Listen to both legacy events and new data sync events
+    window.addEventListener('questionsUsed', handleQuestionsUsed)
+    const unsubscribeDataSync = dataSync.subscribe('questionsUsed', handleQuestionsUsed)
+    const unsubscribeUserData = dataSync.subscribe('userDataChanged', handleQuestionsUsed)
+    const unsubscribeSubscription = dataSync.subscribe('subscriptionUpdated', handleQuestionsUsed)
+    
+    return () => {
+      window.removeEventListener('questionsUsed', handleQuestionsUsed)
+      unsubscribeDataSync()
+      unsubscribeUserData()
+      unsubscribeSubscription()
+    }
+  }, [user, session, loadUserData])
+
+  // Refresh data when page becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && user && session) {
+        loadUserData()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [user, session, loadUserData])
+
   if (!user) {
     return null // Will redirect
   }
@@ -120,12 +168,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="flex h-screen w-full">
         <Sidebar className="border-r">
           <SidebarHeader className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
-                <GraduationCap className="h-5 w-5 text-primary-foreground" />
-              </div>
+            <div className="flex items-center gap-2">
+              <img 
+                src="/pics/logo.png" 
+                alt="Mark Pal Logo" 
+                className="h-7 w-7 object-contain"
+              />
               <div>
-                <h1 className="text-lg font-bold">Mark Pal</h1>
+                <h1 className="text-xl font-normal">Mark Pal</h1>
               </div>
             </div>
           </SidebarHeader>
@@ -135,20 +185,52 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <SidebarGroupLabel>Navigation</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {navigationItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={pathname === item.url}
-                        className="w-full justify-start"
-                      >
-                        <Link href={item.url}>
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
+                  {navigationItems.map((item) => {
+                    // Special handling for Exam Paper Upload - greyed out disabled state
+                    if (item.title === "Exam Paper Upload") {
+                      return (
+                        <SidebarMenuItem key={item.title}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <SidebarMenuButton
+                                className="w-full justify-start text-muted-foreground cursor-not-allowed"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <item.icon className="h-4 w-4" />
+                                  <span>{item.title}</span>
+                                </div>
+                              </SidebarMenuButton>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Coming Soon - This feature will be available soon!</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </SidebarMenuItem>
+                      )
+                    }
+
+                    // Regular navigation items
+                    return (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={pathname === item.url}
+                          className="w-full justify-start"
+                        >
+                          <Link href={item.url}>
+                            <div className="flex items-center gap-2">
+                              <item.icon className="h-4 w-4" />
+                              <span>{item.title}</span>
+                            </div>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -182,7 +264,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="space-y-3">
               {/* Questions Progress */}
               <div className="px-3">
-                <QuestionsProgress />
+                <QuestionsProgress userData={userData} />
               </div>
 
               {/* User Profile */}
@@ -197,22 +279,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <p className="text-sm font-medium truncate">
                     {userData?.fullName || user?.email?.split('@')[0] || "User"}
                   </p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">
-                      {userData?.tier ? userData.tier.charAt(0).toUpperCase() + userData.tier.slice(1) : 'Free'} Plan
-                    </Badge>
-                    {userData?.tier !== 'pro+' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-5 px-2 text-xs"
-                        onClick={() => setPricingPopupOpen(true)}
-                      >
-                        {userData?.tier === 'free' ? 'Upgrade' : 'Change Plan'}
-                      </Button>
-                    )}
-                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {userData?.tier ? userData.tier.charAt(0).toUpperCase() + userData.tier.slice(1) : 'Free'} Plan
+                  </Badge>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                  onClick={() => signOut()}
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </SidebarFooter>

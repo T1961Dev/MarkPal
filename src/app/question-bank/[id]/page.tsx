@@ -10,11 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { BookOpen, Clock, Target, Brain, Save, Sparkles, Edit3, ArrowLeft, History, RotateCcw, Eye, FileText } from 'lucide-react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { SaveQuestionDialog } from '@/components/save-question-dialog';
-import { saveQuestion, createQuestionAttempt, getQuestionAttempts } from '@/lib/supabase';
+import { saveQuestion, createQuestionAttempt, getQuestionAttempts, getUser, User } from '@/lib/supabase';
 import { QuestionBankLiveInput } from '@/components/question-bank-live-input';
 import { AnswerHighlighter } from '@/components/answer-highlighter';
 import { ProgressButton } from '@/components/progress-button';
 import { MarkSchemeDialog } from '@/components/mark-scheme-dialog';
+import { PricingPopup } from '@/components/pricing-popup';
 import { toast } from 'sonner';
 
 interface Question {
@@ -52,7 +53,7 @@ interface QuestionAttempt {
 }
 
 export default function QuestionPage() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -71,6 +72,8 @@ export default function QuestionPage() {
   const [previousAttempts, setPreviousAttempts] = useState<QuestionAttempt[]>([]);
   const [showPreviousAttempts, setShowPreviousAttempts] = useState(false);
   const [currentAttemptId, setCurrentAttemptId] = useState<string | null>(null);
+  const [pricingPopupOpen, setPricingPopupOpen] = useState(false);
+  const [userData, setUserData] = useState<User | null>(null);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -78,6 +81,22 @@ export default function QuestionPage() {
       router.push('/');
     }
   }, [user, router]);
+
+  // Load user data
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (user && session) {
+        try {
+          const data = await getUser(user.id, session.access_token);
+          setUserData(data);
+        } catch (error) {
+          console.error('Error loading user data:', error);
+        }
+      }
+    };
+
+    loadUserData();
+  }, [user, session]);
 
   // Fetch question data and previous attempts
   useEffect(() => {
@@ -159,6 +178,13 @@ export default function QuestionPage() {
   const markAnswer = async () => {
     if (!question || !studentAnswer.trim() || !user) return;
 
+    // Check if user has questions remaining before starting
+    if (userData && userData.questionsLeft <= 0) {
+      setPricingPopupOpen(true);
+      toast.error('No questions remaining. Upgrade your plan to continue practicing!');
+      return;
+    }
+
     setIsMarking(true);
     try {
       const response = await fetch('/api/mark-answer', {
@@ -170,7 +196,9 @@ export default function QuestionPage() {
           question: question.question,
           studentAnswer: studentAnswer,
           markScheme: question.mark_scheme,
-          maxMarks: question.marks
+          maxMarks: question.marks,
+          userId: user.id,
+          accessToken: session?.access_token
         }),
       });
 
@@ -178,6 +206,19 @@ export default function QuestionPage() {
       
       if (data.success) {
         setMarkingResult(data.data);
+        
+        // Refresh questions progress
+        window.dispatchEvent(new Event('questionsUsed'));
+        
+        // Refresh user data to update question count
+        if (user && session) {
+          try {
+            const updatedUserData = await getUser(user.id, session.access_token);
+            setUserData(updatedUserData);
+          } catch (error) {
+            console.error('Error refreshing user data:', error);
+          }
+        }
         
         // Create a question attempt record
         try {
@@ -196,14 +237,23 @@ export default function QuestionPage() {
             },
             detailed_feedback: data.data.feedback || '',
             is_saved: false
-          });
+          }, session?.access_token);
           setCurrentAttemptId(attempt.id);
           fetchPreviousAttempts(); // Refresh the attempts list
         } catch (attemptError) {
           console.error('Error creating question attempt:', attemptError);
+          // Don't show error to user since marking was successful
+          // The marking worked, just the attempt record creation failed
         }
       } else {
-        console.error('Error marking answer:', data.error);
+        if (data.code === 'NO_QUESTIONS_LEFT') {
+          // Show upgrade popup when no questions remaining
+          setPricingPopupOpen(true);
+          toast.error('No questions remaining. Upgrade your plan to continue practicing!');
+        } else {
+          console.error('Error marking answer:', data.error);
+          toast.error('Failed to mark answer. Please try again.');
+        }
       }
     } catch (error) {
       console.error('Error marking answer:', error);
@@ -240,7 +290,7 @@ export default function QuestionPage() {
         question_id: question.id,
         attempt_id: currentAttemptId || undefined,
         version_number: versionNumber
-      });
+      }, session?.access_token);
       
       setSaveDialogOpen(false);
       
@@ -391,6 +441,13 @@ export default function QuestionPage() {
 
   const handleSaveImprovedAnswer = async () => {
     if (!question || !studentAnswer.trim() || !user) return;
+
+    // Check if user has questions remaining before starting
+    if (userData && userData.questionsLeft <= 0) {
+      setPricingPopupOpen(true);
+      toast.error('No questions remaining. Upgrade your plan to continue practicing!');
+      return;
+    }
 
     setIsSavingImproved(true);
     try {
@@ -668,8 +725,9 @@ export default function QuestionPage() {
                     onClick={markAnswer} 
                     disabled={!studentAnswer.trim() || isMarking}
                     className="w-full"
-                    duration={6000}
+                    duration={4000}
                     icon={<Brain className="w-4 h-4 mr-2" />}
+                    isLoading={isMarking}
                   >
                     Mark Answer
                   </ProgressButton>
@@ -760,6 +818,13 @@ export default function QuestionPage() {
         onSave={handleSaveQuestion}
         onDiscard={handleDiscardQuestion}
         isLoading={savingQuestion}
+      />
+
+      {/* Pricing Popup */}
+      <PricingPopup
+        isOpen={pricingPopupOpen}
+        onClose={() => setPricingPopupOpen(false)}
+        currentTier={userData?.tier || 'free'}
       />
     </DashboardLayout>
   );

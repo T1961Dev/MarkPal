@@ -77,6 +77,7 @@ export function MarkSchemeDialog({
     let allExtraInfo: string[] = []
     let aoSpecRef = ''
     let inImportantNotes = false
+    let currentAnswerPoint: MarkSchemePoint | null = null
     
     for (const line of lines) {
       const trimmedLine = line.trim()
@@ -114,44 +115,73 @@ export function MarkSchemeDialog({
       if (markMatch) {
         // Extract answer text and mark
         const answerText = trimmedLine.replace(/\s*\(\d+\s*marks?\)/, '').trim()
-        points.push({
+        currentAnswerPoint = {
           answer: answerText,
           extraInfo: undefined,
           mark: parseInt(markMatch[1]),
           aoSpecRef: aoSpecRef
-        })
+        }
+        points.push(currentAnswerPoint)
       } else if (trimmedLine.match(/^\d+\./)) {
         // This is a numbered answer point
         const answerText = trimmedLine.replace(/^\d+\.\s*/, '').trim()
-        points.push({
+        currentAnswerPoint = {
           answer: answerText,
           extraInfo: undefined,
           mark: 1, // Default to 1 mark per point
           aoSpecRef: aoSpecRef
-        })
+        }
+        points.push(currentAnswerPoint)
       } else if (trimmedLine.startsWith('-')) {
         // This is an additional point
         const answerText = trimmedLine.replace(/^-\s*/, '').trim()
-        points.push({
+        currentAnswerPoint = {
           answer: answerText,
           extraInfo: undefined,
           mark: 1, // Default to 1 mark per point
           aoSpecRef: aoSpecRef
-        })
+        }
+        points.push(currentAnswerPoint)
+      } else if (trimmedLine.startsWith('-') && (trimmedLine.includes('ignore') || trimmedLine.includes('do not accept') || trimmedLine.includes('allow'))) {
+        // This is extra information that should be associated with the current answer
+        if (currentAnswerPoint) {
+          if (!currentAnswerPoint.extraInfo) {
+            currentAnswerPoint.extraInfo = trimmedLine
+          } else {
+            currentAnswerPoint.extraInfo += '; ' + trimmedLine
+          }
+        } else {
+          // If no current answer point, create a point just for this extra info
+          points.push({
+            answer: '',
+            extraInfo: trimmedLine,
+            mark: 0,
+            aoSpecRef: aoSpecRef
+          })
+        }
       }
     }
     
-    // Add all extra info from Important Notes as separate rows
+    // Add all extra info from Important Notes to all answer points
     if (allExtraInfo.length > 0) {
-      // Add each extra info item as a separate row
-      allExtraInfo.forEach(extraInfo => {
+      if (points.length > 0) {
+        // Add extra info to all answer points
+        points.forEach(point => {
+          if (!point.extraInfo) {
+            point.extraInfo = allExtraInfo.join('; ')
+          } else {
+            point.extraInfo += '; ' + allExtraInfo.join('; ')
+          }
+        })
+      } else {
+        // If no answer points, create a general info point
         points.push({
           answer: '',
-          extraInfo: extraInfo,
+          extraInfo: allExtraInfo.join('; '),
           mark: 0,
           aoSpecRef: ''
         })
-      })
+      }
     }
     
     // If no structured points were found, create a single point with the full text
@@ -184,134 +214,131 @@ export function MarkSchemeDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Mark Scheme - Question {actualQuestionNumber}
+            Mark Scheme
           </DialogTitle>
         </DialogHeader>
         
-        {/* Debug info - remove this later */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="p-4 bg-gray-100 rounded-lg text-xs">
-            <div><strong>Original Question Number:</strong> {questionNumber}</div>
-            <div><strong>Extracted Question Number:</strong> {actualQuestionNumber}</div>
-            <div><strong>Max Marks:</strong> {maxMarks}</div>
-            <div><strong>Raw Mark Scheme:</strong> {markScheme.substring(0, 200)}...</div>
-            <div><strong>Parsed Points:</strong> {markSchemePoints.length}</div>
-            <div><strong>Has Extra Info:</strong> {markSchemePoints.some(point => point.extraInfo) ? 'Yes' : 'No'}</div>
-            <div><strong>All Lines:</strong> {markScheme.split('\n').filter(line => line.trim()).map((line, i) => `${i}: "${line.trim()}"`).join(', ')}</div>
-            <div><strong>Extra Info Captured:</strong> {allExtraInfo.length > 0 ? allExtraInfo.join(' | ') : 'None'}</div>
-            <div><strong>Points:</strong> {JSON.stringify(markSchemePoints, null, 2)}</div>
-          </div>
-        )}
         
         <div className="space-y-4">
-          {/* Mark Scheme Table or Plain Text */}
+          {/* Mark Scheme Table */}
           {markSchemePoints.length > 0 ? (
-            // Structured mark scheme table
-            <div className="border border-gray-300 rounded-lg overflow-hidden">
-              {/* Header */}
-              <div className="bg-gray-50 border-b border-gray-300 px-4 py-3">
-                <div className="grid grid-cols-12 gap-4 text-sm font-semibold text-gray-900">
-                  <div className="col-span-2">Question</div>
-                  <div className="col-span-5">Answers</div>
-                  <div className="col-span-3">Extra information</div>
-                  <div className="col-span-1 text-center">Mark</div>
-                  <div className="col-span-1">AO / Spec Ref.</div>
-                </div>
-              </div>
-              
-              {/* Content */}
-              <div className="divide-y divide-gray-200">
-                {/* First, show all extra information rows at the top */}
-                {markSchemePoints
-                  .filter(point => point.extraInfo && !point.answer)
-                  .map((point, index) => (
-                  <div key={`extra-${index}`} className="px-4 py-3">
-                    <div className="grid grid-cols-12 gap-4 text-sm">
-                      <div className="col-span-2 font-semibold text-gray-900">
-                        {index === 0 ? actualQuestionNumber : ''}
-                      </div>
-                      <div className="col-span-5 text-gray-800">
-                        {/* Empty for extra info rows */}
-                      </div>
-                      <div className="col-span-3 text-gray-700">
-                        <span className={cn(
-                          "text-xs",
-                          point.extraInfo?.trim().toLowerCase().startsWith('do not accept') 
-                            ? "font-semibold text-red-700" 
-                            : point.extraInfo?.trim().toLowerCase().startsWith('allow')
-                            ? "text-green-700"
-                            : "text-gray-600"
-                        )}>
-                          {point.extraInfo?.trim() || ''}
-                        </span>
-                      </div>
-                      <div className="col-span-1 text-center font-semibold text-gray-900">
-                        {/* Empty for extra info rows */}
-                      </div>
-                      <div className="col-span-1 text-gray-700">
-                        {/* Empty for extra info rows */}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {/* Then show all answer points */}
-                {markSchemePoints
-                  .filter(point => point.answer)
-                  .map((point, index) => (
-                  <div key={`answer-${index}`} className="px-4 py-3">
-                    <div className="grid grid-cols-12 gap-4 text-sm">
-                      <div className="col-span-2 font-semibold text-gray-900">
-                        {index === 0 ? actualQuestionNumber : ''}
-                      </div>
-                      <div className="col-span-5 text-gray-800">
-                        <div className="space-y-1">
-                          {point.answer.split(' or ').map((answer, answerIndex) => (
-                            <div key={answerIndex} className="flex items-center">
-                              {answerIndex > 0 && (
-                                <span className="font-semibold text-gray-900 mr-2">or</span>
-                              )}
-                              <span>{answer.trim()}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="col-span-3 text-gray-700">
-                        {point.extraInfo && (
-                          <div className="space-y-1">
-                            {point.extraInfo.split(';').map((info, infoIndex) => (
-                              <div key={infoIndex} className="flex items-start">
-                                <span className={cn(
-                                  "text-xs",
-                                  info.trim().toLowerCase().startsWith('do not accept') 
-                                    ? "font-semibold text-red-700" 
-                                    : info.trim().toLowerCase().startsWith('allow')
-                                    ? "text-green-700"
-                                    : "text-gray-600"
-                                )}>
-                                  {info.trim()}
-                                </span>
-                              </div>
+            <div className="overflow-x-auto">
+              <table className="w-full border border-gray-300 text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="border border-gray-300 px-3 py-2 text-left w-28">
+                      Question
+                    </th>
+                    <th className="border border-gray-300 px-3 py-2 text-left">
+                      Answers
+                    </th>
+                    <th className="border border-gray-300 px-3 py-2 text-left">
+                      Extra information
+                    </th>
+                    <th className="border border-gray-300 px-3 py-2 text-left w-16">
+                      Mark
+                    </th>
+                    <th className="border border-gray-300 px-3 py-2 text-left w-28">
+                      AO / Spec Ref.
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="border border-gray-300 px-3 py-2 font-semibold">
+                      {actualQuestionNumber}
+                    </td>
+                    <td className="border border-gray-300 px-3 py-2 align-top">
+                      <ul className="list-disc list-inside space-y-1">
+                        {markSchemePoints
+                          .filter(point => point.answer)
+                          .map((point, index) => (
+                          <li key={`answer-${index}`}>
+                            {point.answer.split(' or ').map((answer, answerIndex) => (
+                              <span key={answerIndex}>
+                                {answerIndex > 0 && (
+                                  <>
+                                    <br />
+                                    <span className="italic">or</span>{" "}
+                                  </>
+                                )}
+                                {answer.trim()}
+                              </span>
                             ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="col-span-1 text-center font-semibold text-gray-900">
-                        {point.mark > 0 ? point.mark : ''}
-                      </div>
-                      <div className="col-span-1 text-gray-700">
-                        {point.aoSpecRef && index === 0 && (
-                          <div className="space-y-1">
-                            {point.aoSpecRef.split(',').map((ref, refIndex) => (
-                              <div key={refIndex}>{ref.trim()}</div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </td>
+                    <td className="border border-gray-300 px-3 py-2 align-top">
+                      <ul className="list-disc list-inside space-y-1">
+                        {(() => {
+                          // Collect all unique extra info items
+                          const allExtraInfo = new Set<string>()
+                          markSchemePoints.forEach(point => {
+                            if (point.extraInfo) {
+                              point.extraInfo.split(';').forEach(info => {
+                                const trimmed = info.trim()
+                                if (trimmed) {
+                                  allExtraInfo.add(trimmed)
+                                }
+                              })
+                            }
+                          })
+                          
+                          return Array.from(allExtraInfo).map((info, index) => (
+                            <li key={`extra-${index}`}>
+                              <span className={cn(
+                                info.toLowerCase().startsWith('do not accept') 
+                                  ? "font-semibold text-red-600" 
+                                  : info.toLowerCase().startsWith('allow')
+                                  ? "text-green-700"
+                                  : "text-gray-600"
+                              )}>
+                                {info}
+                              </span>
+                            </li>
+                          ))
+                        })()}
+                      </ul>
+                    </td>
+                    <td className="border border-gray-300 px-3 py-2 text-center align-top">
+                      {markSchemePoints
+                        .filter(point => {
+                          // Only show marks for actual answer points, not extra info
+                          return point.answer && 
+                                 point.mark > 0 && 
+                                 !point.answer.toLowerCase().includes('allow') &&
+                                 !point.answer.toLowerCase().includes('ignore') &&
+                                 !point.answer.toLowerCase().includes('do not accept') &&
+                                 point.answer.trim() !== ''
+                        })
+                        .map((point, index) => (
+                        <div key={`mark-${index}`}>{point.mark}</div>
+                      ))}
+                    </td>
+                    <td className="border border-gray-300 px-3 py-2 align-top">
+                      {(() => {
+                        // Get unique AO/Spec Ref values
+                        const aoSpecRefs = new Set<string>()
+                        markSchemePoints.forEach(point => {
+                          if (point.aoSpecRef) {
+                            point.aoSpecRef.split(',').forEach(ref => {
+                              const trimmed = ref.trim()
+                              if (trimmed) {
+                                aoSpecRefs.add(trimmed)
+                              }
+                            })
+                          }
+                        })
+                        
+                        return Array.from(aoSpecRefs).map((ref, index) => (
+                          <div key={`ao-${index}`}>{ref}</div>
+                        ))
+                      })()}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           ) : (
             // Plain text mark scheme

@@ -51,16 +51,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, name: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+          },
         },
-      },
-    })
-    return { error }
+      })
+      
+      if (error) {
+        return { error }
+      }
+      
+      // If signup was successful, the database trigger should create the user record
+      // But we'll also try to create it manually as a fallback
+      if (data.user) {
+        try {
+          // Wait a moment for the trigger to potentially fire
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          
+          // Check if user record exists, if not create it
+          const { data: existingUser, error: fetchError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', data.user.id)
+            .single()
+          
+          if (fetchError && fetchError.code === 'PGRST116') {
+            // User doesn't exist, create them manually
+            const { error: createError } = await supabase
+              .from('users')
+              .insert([{
+                id: data.user.id,
+                tier: 'free',
+                questions_left: 5,
+                questions_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                has_seen_welcome: false,
+                full_name: name.trim()
+              }])
+            
+            if (createError) {
+              console.error('Error creating user record:', createError)
+              // Don't fail the signup if user record creation fails
+            }
+          }
+        } catch (userCreationError) {
+          console.error('Error in user creation fallback:', userCreationError)
+          // Don't fail the signup if user record creation fails
+        }
+      }
+      
+      return { error: null }
+    } catch (error) {
+      console.error('Signup error:', error)
+      return { error: error as Error }
+    }
   }
 
   const signOut = async () => {

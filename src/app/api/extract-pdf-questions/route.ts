@@ -20,38 +20,44 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "system",
-          content: `You are an expert at analyzing exam papers and extracting questions. Your task is to:
+          content: `You are an expert at analyzing exam papers and extracting ONLY text-based questions that require written answers.
 
-1. Identify all text-based questions in the provided exam paper text
-2. Extract each question with its number, text, and marks (if available)
-3. Classify each question by type (essay, short-answer, multiple-choice, etc.)
-4. Provide clean, well-formatted output
+STRICT REQUIREMENTS - ONLY EXTRACT QUESTIONS THAT:
+- Require ONLY written text answers
+- Do NOT reference figures, diagrams, charts, or images
+- Do NOT require mathematical calculations or equations
+- Do NOT require filling in blanks or underlining
+- Do NOT require drawing or sketching
+- Do NOT reference external resources or appendices
+- Are purely conceptual, analytical, or descriptive
 
-IMPORTANT RULES:
-- Only extract actual questions that students need to answer
-- Ignore instructions, general text, or non-question content
-- Look for question patterns like "Question 1:", "1.", "Q1:", etc.
-- Extract marks if mentioned (e.g., "(10 marks)", "[15]", etc.)
-- Classify questions based on their wording and requirements
-- If a question spans multiple lines, combine them into one coherent question
-- Remove any formatting artifacts or OCR errors
+EXCLUDE QUESTIONS THAT:
+- Reference "Figure 1", "Diagram A", "Chart below", etc.
+- Ask for calculations, formulas, or mathematical work
+- Require "fill in the blanks" or "underline the correct answer"
+- Ask students to "draw", "sketch", or "label diagrams"
+- Reference page numbers, appendices, or external materials
+- Require graph interpretation or data analysis from visual elements
+- Are multiple choice with options A, B, C, D
+- Ask to "circle" or "tick" answers
 
-Return a JSON array of questions with this exact structure:
+Look for patterns: "1.", "Question 1:", "Q1:", etc.
+Extract marks: "(10 marks)", "[15]", etc.
+Combine multi-line questions into single coherent questions.
+Classify by type: essay (detailed analysis), short-answer (brief responses), or text (general written answers).
+
+Return ONLY a valid JSON array with this exact structure:
 [
   {
     "id": "question-1",
     "questionNumber": "1",
     "text": "Complete question text here",
     "marks": "10",
-    "type": "essay|short-answer|multiple-choice|text"
+    "type": "essay|short-answer|text"
   }
 ]
 
-Question types:
-- "essay": Questions requiring detailed explanations, analysis, or discussion
-- "short-answer": Questions requiring brief, specific answers
-- "multiple-choice": Questions with options to choose from
-- "text": General text-based questions that don't fit other categories`
+CRITICAL: Return ONLY valid JSON. No markdown, no explanations, no additional text.`
         },
         {
           role: "user",
@@ -68,13 +74,42 @@ Question types:
       throw new Error('No response from OpenAI');
     }
 
+    console.log('OpenAI response:', responseText);
+
+    // Clean the response text to ensure it's valid JSON
+    let cleanedResponse = responseText.trim();
+    
+    // Remove markdown code blocks if present
+    cleanedResponse = cleanedResponse.replace(/^```json\s*|\s*```$/g, '').trim();
+    
+    // Remove any text before the first [ or after the last ]
+    const firstBracket = cleanedResponse.indexOf('[');
+    const lastBracket = cleanedResponse.lastIndexOf(']');
+    
+    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+      cleanedResponse = cleanedResponse.substring(firstBracket, lastBracket + 1);
+    }
+
     // Parse the JSON response
     let extractedQuestions;
     try {
-      extractedQuestions = JSON.parse(responseText);
+      extractedQuestions = JSON.parse(cleanedResponse);
     } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', responseText);
-      throw new Error('Failed to parse question extraction results');
+      console.error('Failed to parse OpenAI response:', cleanedResponse);
+      console.error('Parse error:', parseError);
+      
+      // Try to extract JSON from the response using regex
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        try {
+          extractedQuestions = JSON.parse(jsonMatch[0]);
+        } catch (secondParseError) {
+          console.error('Second parse attempt failed:', secondParseError);
+          throw new Error('Failed to parse question extraction results - invalid JSON format');
+        }
+      } else {
+        throw new Error('Failed to parse question extraction results - no valid JSON found');
+      }
     }
 
     // Validate the response structure
@@ -83,13 +118,50 @@ Question types:
     }
 
     // Clean up and validate each question
-    const cleanedQuestions = extractedQuestions.map((q: any, index: number) => ({
-      id: q.id || `question-${index + 1}`,
-      questionNumber: q.questionNumber || (index + 1).toString(),
-      text: q.text?.trim() || '',
-      marks: q.marks || null,
-      type: q.type || 'text'
-    })).filter(q => q.text.length > 10); // Filter out very short questions
+    const cleanedQuestions = extractedQuestions
+      .map((q: any, index: number) => ({
+        id: q.id || `question-${index + 1}`,
+        questionNumber: q.questionNumber || (index + 1).toString(),
+        text: q.text?.trim() || '',
+        marks: q.marks || null,
+        type: q.type || 'text'
+      }))
+      .filter(q => {
+        // Filter out very short questions
+        if (q.text.length < 20) return false;
+        
+        // Filter out questions that reference figures, diagrams, etc.
+        const textLower = q.text.toLowerCase();
+        const hasVisualReference = textLower.includes('figure') || 
+                                 textLower.includes('diagram') || 
+                                 textLower.includes('chart') || 
+                                 textLower.includes('graph') ||
+                                 textLower.includes('image') ||
+                                 textLower.includes('picture');
+        
+        // Filter out mathematical questions
+        const hasMath = textLower.includes('calculate') || 
+                       textLower.includes('solve') || 
+                       textLower.includes('equation') ||
+                       textLower.includes('formula') ||
+                       textLower.includes('work out');
+        
+        // Filter out fill-in-the-blank questions
+        const hasBlanks = textLower.includes('fill in') || 
+                         textLower.includes('complete') ||
+                         textLower.includes('underline') ||
+                         textLower.includes('circle') ||
+                         textLower.includes('tick');
+        
+        // Filter out drawing questions
+        const hasDrawing = textLower.includes('draw') || 
+                          textLower.includes('sketch') || 
+                          textLower.includes('label') ||
+                          textLower.includes('mark on');
+        
+        // Only include questions that are purely text-based
+        return !hasVisualReference && !hasMath && !hasBlanks && !hasDrawing;
+      });
 
     return NextResponse.json({
       success: true,

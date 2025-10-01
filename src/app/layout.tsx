@@ -5,7 +5,7 @@ import { AuthProvider } from "@/contexts/auth-context";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
-  title: "Mark Pal - AI GCSE/A-Level Feedback",
+  title: "Mark Pal",
   description: "Get instant AI feedback on your GCSE and A-Level answers with mark scheme analysis",
 };
 

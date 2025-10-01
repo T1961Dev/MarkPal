@@ -134,18 +134,6 @@ export default function SettingsPage() {
     return null // Will redirect
   }
 
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading settings...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    )
-  }
 
   return (
     <DashboardLayout>
@@ -159,16 +147,25 @@ export default function SettingsPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">
-              {userData?.tier ? userData.tier.charAt(0).toUpperCase() + userData.tier.slice(1) : 'Free'} Plan
-            </Badge>
-            {userData?.tier !== 'pro+' && (
-              <Button 
-                size="sm"
-                onClick={() => setPricingPopupOpen(true)}
-              >
-                {userData?.tier === 'free' ? 'Upgrade' : 'Change Plan'}
-              </Button>
+            {userData ? (
+              <>
+                <Badge variant="secondary">
+                  {userData.tier.charAt(0).toUpperCase() + userData.tier.slice(1)} Plan
+                </Badge>
+                {userData.tier !== 'pro+' && (
+                  <Button 
+                    size="sm"
+                    onClick={() => setPricingPopupOpen(true)}
+                  >
+                    {userData.tier === 'free' ? 'Upgrade' : 'Change Plan'}
+                  </Button>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="h-6 w-20 bg-muted rounded animate-pulse"></div>
+                <div className="h-8 w-16 bg-muted rounded animate-pulse"></div>
+              </div>
             )}
           </div>
         </div>

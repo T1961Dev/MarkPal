@@ -47,7 +47,7 @@ export default async function Success({
           tier: tier,
           questionsLeft: questionLimit,
           questions_reset_date: nextMonth.toISOString().split('T')[0], // Format as YYYY-MM-DD
-          stripe_customer_id: customer || null, // Update stripe customer ID
+          stripe_customer_id: typeof customer === 'string' ? customer : customer?.id || null, // Update stripe customer ID
         })
         .eq('id', user_id)
 
@@ -83,7 +83,7 @@ export default async function Success({
               </p>
               <div className="bg-muted p-4 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  You now have {questionLimit} questions per month.
+                  You now have {tier === 'pro+' ? 'INFINITE' : questionLimit} questions per month.
                 </p>
               </div>
               <Link

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { GraduationCap, Bookmark, BookOpen } from "lucide-react"
+import { GraduationCap, Bookmark, BookOpen, Upload, Lock, Crown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
 import { AuthDialog } from "./auth-dialog"
@@ -56,9 +56,11 @@ export function Navbar() {
               window.location.href = '/'
             }}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
-              <GraduationCap className="h-5 w-5 text-primary-foreground" />
-            </div>
+            <img 
+              src="/pics/logo.png" 
+              alt="Mark Pal Logo" 
+              className="h-10 w-10 object-contain"
+            />
           </Link>
 
           {/* Navigation Links - Centered on screen */}
@@ -93,6 +95,23 @@ export function Navbar() {
                   >
                     <BookOpen className="h-4 w-4 mr-2" />
                     Question Bank
+                  </Button>
+                </Link>
+
+                {/* Exam Upload Button */}
+                <Link href={userData?.tier === 'pro+' ? "/dashboard/question-bank?tab=upload" : "/exam-upload"}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={`text-xs font-medium transition-colors ${
+                      userData?.tier === 'pro+' 
+                        ? "border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700" 
+                        : "border-muted text-muted-foreground hover:bg-muted/50 relative"
+                    }`}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Exam Upload
+                    {userData?.tier !== 'pro+' && <Lock className="h-3 w-3 ml-1" />}
                   </Button>
                 </Link>
 

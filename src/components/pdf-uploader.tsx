@@ -26,15 +26,20 @@ interface PDFMetadata {
 interface PDFUploaderProps {
   onQuestionsExtracted: (questions: ExtractedQuestion[], fullText: string, metadata?: PDFMetadata) => void
   onError: (error: string) => void
+  onPaperSaved?: (paperId: string) => void
+  showSaveOption?: boolean
 }
 
-export function PDFUploader({ onQuestionsExtracted, onError }: PDFUploaderProps) {
+export function PDFUploader({ onQuestionsExtracted, onError, onPaperSaved, showSaveOption = false }: PDFUploaderProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [extractedText, setExtractedText] = useState<string>("")
   const [extractedQuestions, setExtractedQuestions] = useState<ExtractedQuestion[]>([])
   const [pdfMetadata, setPdfMetadata] = useState<PDFMetadata | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [paperSaved, setPaperSaved] = useState(false)
+  const [savedPaperId, setSavedPaperId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,6 +76,9 @@ export function PDFUploader({ onQuestionsExtracted, onError }: PDFUploaderProps)
       // Create FormData to send the file to the server for FULL text extraction
       const formData = new FormData()
       formData.append('file', file)
+      if (savedPaperId) {
+        formData.append('paperId', savedPaperId)
+      }
       
       // Send PDF to server for FULL text extraction using pdf-parse
       const response = await fetch('/api/process-pdf', {
@@ -109,6 +117,48 @@ export function PDFUploader({ onQuestionsExtracted, onError }: PDFUploaderProps)
       onError(error instanceof Error ? error.message : 'Failed to process PDF. Please try again.')
     } finally {
       setIsProcessing(false)
+    }
+  }
+
+  const savePaper = async () => {
+    if (!uploadedFile || !extractedText || !pdfMetadata) {
+      onError('No paper data to save')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const response = await fetch('/api/papers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: pdfMetadata.title || uploadedFile.name.replace('.pdf', ''),
+          filename: uploadedFile.name,
+          fileSize: uploadedFile.size,
+          subject: pdfMetadata.subject || 'other',
+          level: 'mixed', // Default level, could be determined from content
+          examBoard: null,
+          year: null,
+          extractedText: extractedText
+        })
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        setPaperSaved(true)
+        setSavedPaperId(data.data.id)
+        onPaperSaved?.(data.data.id)
+      } else {
+        onError(data.error || 'Failed to save paper')
+      }
+    } catch (error) {
+      console.error('Error saving paper:', error)
+      onError('Failed to save paper. Please try again.')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -425,6 +475,57 @@ export function PDFUploader({ onQuestionsExtracted, onError }: PDFUploaderProps)
                   </p>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Save Paper Option for Pro+ users */}
+      {showSaveOption && extractedQuestions.length > 0 && (
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Save Paper
+            </CardTitle>
+            <CardDescription>
+              Save this paper to your collection for future reference
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                {paperSaved ? (
+                  <div className="flex items-center gap-2 text-green-600">
+                    <CheckCircle className="w-4 h-4" />
+                    Paper saved successfully
+                  </div>
+                ) : (
+                  <span>Save this paper to access it later</span>
+                )}
+              </div>
+              <Button 
+                onClick={savePaper}
+                disabled={isSaving || paperSaved}
+                className="gap-2"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : paperSaved ? (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Saved
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4" />
+                    Save Paper
+                  </>
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>

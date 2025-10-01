@@ -15,7 +15,7 @@ BEGIN
   CASE user_tier
     WHEN 'free' THEN RETURN 5;
     WHEN 'basic' THEN RETURN 20;
-    WHEN 'pro' THEN RETURN 100;
+    WHEN 'pro' THEN RETURN 50;
     WHEN 'pro+' THEN RETURN 999999;
     ELSE RETURN 5;
   END CASE;

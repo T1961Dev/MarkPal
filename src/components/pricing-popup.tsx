@@ -26,12 +26,7 @@ const plans = [
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
     features: [
-      '20 questions per month',
-      'Advanced AI analysis',
-      'Save unlimited questions',
-      'Priority email support',
-      'Detailed feedback reports',
-      'Question history'
+      '20 questions per month'
     ],
     buttonText: 'Upgrade to Basic',
     popular: false
@@ -46,15 +41,7 @@ const plans = [
     color: 'text-purple-600',
     bgColor: 'bg-purple-50',
     features: [
-      '100 questions per month',
-      'Premium AI analysis',
-      'Save unlimited questions',
-      'Priority phone support',
-      'Detailed feedback reports',
-      'Question history',
-      'Custom question types',
-      'Advanced analytics',
-      'Export functionality'
+      '50 questions per month'
     ],
     buttonText: 'Upgrade to Pro',
     popular: true
@@ -69,18 +56,9 @@ const plans = [
     color: 'text-amber-600',
     bgColor: 'bg-amber-50',
     features: [
-      'Unlimited questions per month',
-      'Premium AI analysis',
-      'Save unlimited questions',
-      'Priority phone support',
-      'Detailed feedback reports',
-      'Question history',
-      'Custom question types',
-      'Advanced analytics',
-      'Export functionality',
-      'API access',
-      'White-label options',
-      'Dedicated support'
+      '<strong>Unlimited</strong> questions per month',
+      '<strong>Exam paper upload</strong> - Upload and extract questions from full exam papers',
+      '<strong>Save papers</strong> - Store and organize uploaded exam papers'
     ],
     buttonText: 'Upgrade to Pro+',
     popular: false
@@ -196,7 +174,7 @@ export function PricingPopup({ isOpen, onClose, currentTier }: PricingPopupProps
                     {plan.features.map((feature, index) => (
                       <div key={index} className="flex items-start gap-3">
                         <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span className="text-sm">{feature}</span>
+                        <span className="text-sm" dangerouslySetInnerHTML={{ __html: feature }} />
                       </div>
                     ))}
                   </div>

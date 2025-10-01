@@ -98,14 +98,26 @@ export interface SavedQuestion {
 }
 
 // Database functions
-export const saveQuestion = async (questionData: Omit<SavedQuestion, 'id' | 'created_at' | 'updated_at'>) => {
-  const { data, error } = await supabase
+export const saveQuestion = async (questionData: Omit<SavedQuestion, 'id' | 'created_at' | 'updated_at'>, accessToken?: string) => {
+  const client = accessToken ? createServerSupabaseClient(accessToken) : supabase
+  const { data, error } = await client
     .from('saved_questions')
     .insert([questionData])
     .select()
     .single()
 
   if (error) throw error
+  
+  // Update streak after saving question
+  if (accessToken) {
+    try {
+      await updateUserStreak(questionData.user_id, accessToken)
+    } catch (streakError) {
+      console.error('Error updating streak after saving question:', streakError)
+      // Don't throw error - saving the question is more important
+    }
+  }
+  
   return data
 }
 
@@ -131,8 +143,9 @@ export const deleteSavedQuestion = async (questionId: string, userId: string) =>
 }
 
 // Question Attempt functions
-export const createQuestionAttempt = async (attemptData: Omit<QuestionAttempt, 'id' | 'created_at' | 'updated_at'>) => {
-  const { data, error } = await supabase
+export const createQuestionAttempt = async (attemptData: Omit<QuestionAttempt, 'id' | 'created_at' | 'updated_at'>, accessToken?: string) => {
+  const client = accessToken ? createServerSupabaseClient(accessToken) : supabase
+  const { data, error } = await client
     .from('question_attempts')
     .insert(attemptData)
     .select()
@@ -238,43 +251,88 @@ export interface User {
   average_score?: number
   saved_questions?: number
   streak?: number
+  has_seen_welcome?: boolean
 }
 
 export const getUser = async (userId: string, accessToken?: string): Promise<User | null> => {
   const client = accessToken ? createServerSupabaseClient(accessToken) : supabase
-  const { data, error } = await client
-    .from('users')
-    .select('*')
-    .eq('id', userId)
-    .single()
+  
+  try {
+    const { data, error } = await client
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single()
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      // User doesn't exist, create them
-      return createUser(userId, accessToken)
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // User doesn't exist, create them
+        // Try to get the name from auth user metadata if available
+        let fullName = ''
+        try {
+          const { data: authUser } = await supabase.auth.getUser()
+          if (authUser.user?.user_metadata?.name) {
+            fullName = authUser.user.user_metadata.name
+          }
+        } catch (metadataError) {
+          console.log('Could not fetch auth user metadata:', metadataError)
+        }
+        return createUser(userId, accessToken, fullName)
+      }
+      console.error('Error fetching user:', error)
+      throw error
+    }
+    
+    // Check and reset questions if needed
+    return await checkAndResetUserQuestions(userId, accessToken)
+  } catch (error) {
+    console.error('Error in getUser:', error)
+    throw error
+  }
+}
+
+export const createUser = async (userId: string, accessToken?: string, fullName?: string): Promise<User> => {
+  const client = createServerSupabaseClient(accessToken)
+  
+  try {
+    const { data, error } = await client
+      .from('users')
+      .insert([{ 
+        id: userId, 
+        tier: 'free', 
+        questionsLeft: 5,
+        questions_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+        has_seen_welcome: false, // New users haven't seen the welcome popup yet
+        full_name: fullName || ''
+      }])
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  } catch (error) {
+    console.error('Error creating user:', error)
+    // If the has_seen_welcome column doesn't exist, try without it
+    if ((error as any)?.message?.includes('has_seen_welcome')) {
+      console.log('has_seen_welcome column not found, creating user without it')
+      const { data, error: retryError } = await client
+        .from('users')
+        .insert([{ 
+          id: userId, 
+          tier: 'free', 
+          questionsLeft: 5,
+          questions_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          full_name: fullName || ''
+        }])
+        .select()
+        .single()
+
+      if (retryError) throw retryError
+      // Add the has_seen_welcome field manually for the response
+      return { ...data, has_seen_welcome: false }
     }
     throw error
   }
-  
-  // Check and reset questions if needed
-  return checkAndResetUserQuestions(userId, accessToken)
-}
-
-export const createUser = async (userId: string, accessToken?: string): Promise<User> => {
-  const client = createServerSupabaseClient(accessToken)
-  const { data, error } = await client
-    .from('users')
-    .insert([{ 
-      id: userId, 
-      tier: 'free', 
-      questionsLeft: 5,
-      questions_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 30 days from now
-    }])
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
 }
 
 export const decrementQuestionsLeft = async (userId: string, accessToken?: string): Promise<void> => {
@@ -295,13 +353,32 @@ export const decrementQuestionsLeft = async (userId: string, accessToken?: strin
     .eq('id', userId)
 
   if (error) throw error
+
+  // Note: Data sync events are handled in the client-side components
+  // This ensures the UI updates when questions are used
+}
+
+// Update user streak when they practice
+export const updateUserStreak = async (userId: string, accessToken?: string): Promise<void> => {
+  const client = createServerSupabaseClient(accessToken)
+  
+  // Get current streak from getUserStats
+  const stats = await getUserStats(userId, accessToken)
+  
+  // Update the user's streak in the database
+  const { error } = await client
+    .from('users')
+    .update({ streak: stats.streak })
+    .eq('id', userId)
+
+  if (error) throw error
 }
 
 export const getQuestionLimit = (tier: string): number => {
   switch (tier) {
     case 'free': return 5
     case 'basic': return 20
-    case 'pro': return 100
+    case 'pro': return 50
     case 'pro+': return 999999 // Unlimited (very high number)
     default: return 5
   }
@@ -430,9 +507,31 @@ export const getDashboardStats = async (userId: string, accessToken?: string): P
 }
 
 // Get user stats for dashboard - simplified
-export const getUserStats = async (userId: string, accessToken?: string) => {
+export const getUserStats = async (userId: string, accessToken?: string, timePeriod: 'today' | 'week' | 'month' | 'alltime' = 'alltime') => {
   try {
     const client = accessToken ? createServerSupabaseClient(accessToken) : supabase
+    
+    // Calculate date range based on time period
+    let startDate: Date
+    switch (timePeriod) {
+      case 'today':
+        startDate = new Date()
+        startDate.setHours(0, 0, 0, 0)
+        break
+      case 'week':
+        startDate = new Date()
+        startDate.setDate(startDate.getDate() - 7)
+        break
+      case 'month':
+        startDate = new Date()
+        startDate.setMonth(startDate.getMonth() - 1)
+        break
+      case 'alltime':
+      default:
+        startDate = new Date('1900-01-01') // Very old date to get all records
+        break
+    }
+    const startDateStr = startDate.toISOString()
     
     // Get user data and saved questions in parallel
     const [userData, { count: savedQuestionsCount }, { data: savedQuestions }] = await Promise.all([
@@ -445,36 +544,100 @@ export const getUserStats = async (userId: string, accessToken?: string) => {
         .from('saved_questions')
         .select('score, max_score, created_at')
         .eq('user_id', userId)
+        .gte('created_at', startDateStr)
         .order('created_at', { ascending: false })
-        .limit(30)
     ])
 
-    // Calculate questions used
-    const questionsUsed = userData ? (getQuestionLimit(userData.tier) - userData.questionsLeft) : 0
+    // Get question attempts for the user based on time period
+    const { data: questionAttempts } = await client
+      .from('question_attempts')
+      .select('created_at')
+      .eq('user_id', userId)
+      .gte('created_at', startDateStr)
+      .order('created_at', { ascending: false })
+
+    // Calculate questions practiced in the selected time period
+    let questionsUsed = 0
+    
+    if (timePeriod === 'today') {
+      // For today, filter by exact date match
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const todayStr = today.toISOString().split('T')[0]
+      
+      const todaySavedQuestions = savedQuestions ? savedQuestions.filter(q => 
+        q.created_at.split('T')[0] === todayStr
+      ).length : 0
+      
+      const todayQuestionAttempts = questionAttempts ? questionAttempts.filter(q => 
+        q.created_at.split('T')[0] === todayStr
+      ).length : 0
+      
+      questionsUsed = todaySavedQuestions + todayQuestionAttempts
+    } else {
+      // For other periods, count all records since they're already filtered by date range
+      questionsUsed = (savedQuestions?.length || 0) + (questionAttempts?.length || 0)
+    }
+    
+    // Debug logging
+    console.log('Dashboard stats debug:', {
+      timePeriod,
+      startDateStr,
+      savedQuestionsCount: savedQuestions?.length || 0,
+      questionAttemptsCount: questionAttempts?.length || 0,
+      totalQuestionsUsed: questionsUsed
+    })
 
     // Calculate average score
     const averageScore = savedQuestions && savedQuestions.length > 0
       ? Math.round(savedQuestions.reduce((sum, q) => sum + (q.score / q.max_score) * 100, 0) / savedQuestions.length)
       : 0
 
-    // Calculate streak (simplified)
+    // Calculate streak - check both saved questions and question attempts
     let streak = 0
-    if (savedQuestions && savedQuestions.length > 0) {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
+    
+    // Combine all activity dates (saved questions + question attempts)
+    const allActivityDates = new Set<string>()
+    
+    // Add saved question dates
+    if (savedQuestions) {
+      savedQuestions.forEach(q => {
+        const dateStr = q.created_at.split('T')[0]
+        allActivityDates.add(dateStr)
+      })
+    }
+    
+    // Add question attempt dates
+    if (questionAttempts) {
+      questionAttempts.forEach(attempt => {
+        const dateStr = attempt.created_at.split('T')[0]
+        allActivityDates.add(dateStr)
+      })
+    }
+    
+    // Calculate consecutive days from today backwards
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    for (let i = 0; i < 365; i++) { // Check up to a year back
+      const checkDate = new Date(today)
+      checkDate.setDate(today.getDate() - i)
+      const dateStr = checkDate.toISOString().split('T')[0]
       
-      for (let i = 0; i < 30; i++) {
-        const checkDate = new Date(today)
-        checkDate.setDate(today.getDate() - i)
-        const dateStr = checkDate.toISOString().split('T')[0]
-        
-        if (savedQuestions.some(q => q.created_at.startsWith(dateStr))) {
-          streak++
-        } else {
-          break
-        }
+      if (allActivityDates.has(dateStr)) {
+        streak++
+      } else {
+        break
       }
     }
+    
+    // Debug logging
+    console.log('Streak calculation:', {
+      userId,
+      savedQuestionsCount: savedQuestions?.length || 0,
+      questionAttemptsCount: questionAttempts?.length || 0,
+      allActivityDates: Array.from(allActivityDates).sort().reverse(),
+      calculatedStreak: streak
+    })
 
     return {
       questionsUsed,
@@ -484,6 +647,7 @@ export const getUserStats = async (userId: string, accessToken?: string) => {
     }
   } catch (error) {
     console.error('Error getting user stats:', error)
+    // Return default values but also log the error for debugging
     return {
       questionsUsed: 0,
       averageScore: 0,
@@ -506,6 +670,38 @@ export const updateUserProfile = async (userId: string, updates: { fullName?: st
 
   if (error) throw error
   return data
+}
+
+// Mark welcome popup as seen
+export const markWelcomeSeen = async (userId: string, accessToken?: string) => {
+  const client = accessToken ? createServerSupabaseClient(accessToken) : supabase
+  
+  try {
+    const { data, error } = await client
+      .from('users')
+      .update({ has_seen_welcome: true })
+      .eq('id', userId)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  } catch (error) {
+    console.error('Error marking welcome as seen:', error)
+    // If the has_seen_welcome column doesn't exist, just return the current user data
+    if ((error as any)?.message?.includes('has_seen_welcome')) {
+      console.log('has_seen_welcome column not found, skipping update')
+      const { data, error: fetchError } = await client
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single()
+      
+      if (fetchError) throw fetchError
+      return data
+    }
+    throw error
+  }
 }
 
 // Check and reset user questions if needed

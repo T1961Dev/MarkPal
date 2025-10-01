@@ -12,6 +12,7 @@ interface ProgressButtonProps {
   className?: string;
   duration?: number; // Duration in milliseconds
   icon?: React.ReactNode;
+  isLoading?: boolean; // External loading state
 }
 
 export function ProgressButton({ 
@@ -20,7 +21,8 @@ export function ProgressButton({
   children, 
   className = "",
   duration = 6000, // Default 6 seconds to match timeout
-  icon
+  icon,
+  isLoading = false
 }: ProgressButtonProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -33,6 +35,20 @@ export function ProgressButton({
     onClick();
   };
 
+  // Sync with external loading state
+  useEffect(() => {
+    if (isLoading && !isProcessing) {
+      setIsProcessing(true);
+      setProgress(0);
+    } else if (!isLoading && isProcessing) {
+      // External loading finished, reset after a short delay
+      setTimeout(() => {
+        setIsProcessing(false);
+        setProgress(0);
+      }, 500);
+    }
+  }, [isLoading, isProcessing]);
+
   useEffect(() => {
     if (isProcessing) {
       const interval = setInterval(() => {
@@ -42,11 +58,6 @@ export function ProgressButton({
           
           if (newProgress >= 100) {
             clearInterval(interval);
-            // Reset after completion
-            setTimeout(() => {
-              setIsProcessing(false);
-              setProgress(0);
-            }, 500);
             return 100;
           }
           
@@ -58,20 +69,48 @@ export function ProgressButton({
     }
   }, [isProcessing, duration]);
 
+
   if (isProcessing) {
     return (
-      <div className="relative w-full">
+      <div className="relative w-full overflow-hidden rounded-md">
         <Button
           disabled
-          className={`w-full ${className}`}
+          className={`w-full relative z-10 border-0 bg-muted ${className}`}
         >
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          Processing...
+          {/* Progress bar overlay with accent blue */}
+          <div 
+            className="absolute inset-0 bg-primary transition-all duration-200 ease-out"
+            style={{
+              width: `${progress}%`,
+              transition: 'width 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+          />
+          <div className="relative z-10 flex items-center justify-center">
+            <Loader2 
+              className="w-4 h-4 mr-2 animate-spin transition-colors duration-200"
+              style={{
+                color: progress > 60 ? '#ffffff' : '#000000',
+                filter: 'none',
+                opacity: 1
+              }}
+            />
+            <span 
+              className="font-medium transition-colors duration-200"
+              style={{
+                color: progress > 60 ? '#ffffff' : '#000000',
+                filter: 'none',
+                opacity: 1,
+                fontWeight: '600'
+              }}
+            >
+              {progress < 20 ? 'Analyzing...' : 
+               progress < 40 ? 'Processing...' : 
+               progress < 60 ? 'Evaluating...' : 
+               progress < 80 ? 'Finalizing...' : 
+               'Almost done...'} {Math.round(progress)}%
+            </span>
+          </div>
         </Button>
-        <Progress 
-          value={progress} 
-          className="absolute bottom-0 left-0 right-0 h-1 rounded-b-md" 
-        />
       </div>
     );
   }
