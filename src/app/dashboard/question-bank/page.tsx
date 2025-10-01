@@ -13,7 +13,7 @@ import { BookOpen, Target, Search, Filter, ArrowRight, RefreshCw, Upload, FileTe
 import Link from "next/link"
 import { QuestionBankCard } from "@/components/question-bank-card"
 import { ExamUploadSection } from "@/components/exam-upload-section"
-import { supabase } from "@/lib/supabase"
+import { supabase, getUser, User as UserType } from "@/lib/supabase"
 import { useSearchParams } from "next/navigation"
 
 interface Question {
@@ -68,8 +68,9 @@ const difficulties = [
 ]
 
 export default function QuestionBank() {
-  const { user } = useAuth()
+  const { user, session } = useAuth()
   const searchParams = useSearchParams()
+  const [userData, setUserData] = useState<UserType | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
   const [papers, setPapers] = useState<Paper[]>([])
   const [loading, setLoading] = useState(true)
@@ -98,6 +99,22 @@ export default function QuestionBank() {
       window.location.href = '/'
     }
   }, [user])
+
+  // Load user data
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (user && session) {
+        try {
+          const data = await getUser(user.id, session.access_token)
+          setUserData(data)
+        } catch (error) {
+          console.error('Error loading user data:', error)
+        }
+      }
+    }
+
+    loadUserData()
+  }, [user, session])
 
   // Fetch questions based on filters
   useEffect(() => {
@@ -170,7 +187,7 @@ export default function QuestionBank() {
   }
 
   const fetchPapers = async () => {
-    if (!user || user.tier !== 'pro+') return
+    if (!userData || userData.tier !== 'pro+') return
     
     try {
       setPapersLoading(true)
@@ -260,7 +277,7 @@ export default function QuestionBank() {
     return null // Will redirect
   }
 
-  const isProPlus = user?.tier === 'pro+'
+  const isProPlus = userData?.tier === 'pro+'
 
   return (
     <DashboardLayout>
