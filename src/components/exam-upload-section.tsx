@@ -9,21 +9,7 @@ import { Upload, Lock, FileText, Crown } from "lucide-react"
 import { ExamUploadFlow } from "@/components/exam-upload-flow"
 import { PricingPopup } from "@/components/pricing-popup"
 import { getUser, User } from "@/lib/supabase"
-
-interface ExtractedQuestion {
-  question: string
-  mark_scheme: string
-  marks: number
-  question_type: string
-  difficulty: string
-}
-
-interface PDFMetadata {
-  title: string
-  creator: string
-  creationDate?: string
-  modificationDate?: string
-}
+import { ExtractedQuestion, PDFMetadata, LegacyExtractedQuestion } from "@/types/exam-types"
 
 interface ExamUploadSectionProps {
   onQuestionsExtracted?: (questions: ExtractedQuestion[], fullText: string, metadata: PDFMetadata) => void
@@ -34,6 +20,13 @@ export function ExamUploadSection({ onQuestionsExtracted, onError }: ExamUploadS
   const { user } = useAuth()
   const [showPricing, setShowPricing] = useState(false)
   const [userData, setUserData] = useState<User | null>(null)
+
+  // Convert the new format questions to the expected format
+  const handleQuestionsExtracted = (questions: ExtractedQuestion[], fullText: string, metadata: PDFMetadata) => {
+    if (onQuestionsExtracted) {
+      onQuestionsExtracted(questions, fullText, metadata)
+    }
+  }
 
   useEffect(() => {
     if (user) {
@@ -119,7 +112,7 @@ export function ExamUploadSection({ onQuestionsExtracted, onError }: ExamUploadS
 
   return (
     <ExamUploadFlow 
-      onQuestionsExtracted={onQuestionsExtracted}
+      onQuestionsExtracted={handleQuestionsExtracted}
       onError={onError}
     />
   )

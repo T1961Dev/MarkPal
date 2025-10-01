@@ -5,23 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, Upload, X, Loader2, CheckCircle, AlertCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-
-interface ExtractedQuestion {
-  id: string
-  text: string
-  questionNumber?: string
-  marks?: string
-  type: 'text' | 'multiple-choice' | 'essay' | 'short-answer'
-}
-
-interface PDFMetadata {
-  pages: number
-  title?: string
-  author?: string
-  subject?: string
-  creator?: string
-  producer?: string
-}
+import { ExtractedQuestion, PDFMetadata } from "@/types/exam-types"
 
 interface PDFUploaderProps {
   onQuestionsExtracted: (questions: ExtractedQuestion[], fullText: string, metadata?: PDFMetadata) => void

@@ -11,29 +11,7 @@ import { PDFUploader } from "@/components/pdf-uploader"
 import { PricingPopup } from "@/components/pricing-popup"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { getUser, User } from "@/lib/supabase"
-
-interface ExtractedQuestion {
-  id: string
-  text: string
-  questionNumber?: string
-  marks?: string
-  type: 'text' | 'multiple-choice' | 'essay' | 'short-answer'
-  markScheme?: string
-  maxMarks?: number
-  subject?: string
-  topic?: string
-  level?: string
-  difficulty?: string
-}
-
-interface PDFMetadata {
-  pages: number
-  title?: string
-  author?: string
-  subject?: string
-  creator?: string
-  producer?: string
-}
+import { ExtractedQuestion, PDFMetadata } from "@/types/exam-types"
 
 interface ExamUploadFlowProps {
   onQuestionsExtracted?: (questions: ExtractedQuestion[], fullText: string, metadata: PDFMetadata) => void
