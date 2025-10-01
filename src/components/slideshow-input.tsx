@@ -150,7 +150,7 @@ export function SlideshowInput({ onSubmit, isLoading = false }: SlideshowInputPr
 
   return (
     <>
-      <Navbar currentSlide={currentSlide} totalSlides={slides.length} />
+      <Navbar />
       <div className="w-full max-w-4xl mx-auto pt-24">
         {/* Slide Container */}
         <div className="relative">
