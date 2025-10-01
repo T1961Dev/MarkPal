@@ -109,7 +109,7 @@ export default function ExamUploadPage() {
       <PricingPopup 
         isOpen={showPricing} 
         onClose={() => setShowPricing(false)} 
-        currentTier={user?.tier || 'free'} 
+        currentTier={userData?.tier || 'free'} 
       />
     </DashboardLayout>
   )

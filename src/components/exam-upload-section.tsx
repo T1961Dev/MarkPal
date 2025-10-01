@@ -111,7 +111,7 @@ export function ExamUploadSection({ onQuestionsExtracted, onError }: ExamUploadS
         <PricingPopup 
           isOpen={showPricing} 
           onClose={() => setShowPricing(false)} 
-          currentTier={user?.tier || 'free'} 
+          currentTier={userData?.tier || 'free'} 
         />
       </>
     )
