@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
@@ -52,7 +52,7 @@ interface QuestionAttempt {
   is_saved: boolean;
 }
 
-export default function QuestionPage() {
+function QuestionPageContent() {
   const { user, session } = useAuth();
   const params = useParams();
   const router = useRouter();
@@ -827,5 +827,34 @@ export default function QuestionPage() {
         currentTier={userData?.tier || 'free'}
       />
     </DashboardLayout>
+  );
+}
+
+export default function QuestionPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="space-y-8">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" disabled>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">Loading Question...</h1>
+              <p className="text-muted-foreground">Please wait while we load the question</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading question details...</p>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    }>
+      <QuestionPageContent />
+    </Suspense>
   );
 }

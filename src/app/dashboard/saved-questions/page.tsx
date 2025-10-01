@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -54,7 +54,7 @@ interface SavedQuestion {
   difficulty?: string
 }
 
-export default function SavedQuestions() {
+function SavedQuestionsContent() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
   const [savedQuestions, setSavedQuestions] = useState<SavedQuestion[]>([])
@@ -442,5 +442,32 @@ export default function SavedQuestions() {
         />
       </div>
     </DashboardLayout>
+  )
+}
+
+export default function SavedQuestions() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Saved Questions</h1>
+              <p className="text-muted-foreground mt-2">
+                Your personalized question collection
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading saved questions...</p>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    }>
+      <SavedQuestionsContent />
+    </Suspense>
   )
 }
