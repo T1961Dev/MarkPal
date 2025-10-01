@@ -1,24 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
-
-// Required by pdfjs-dist in Node
-import { GlobalWorkerOptions } from "pdfjs-dist/legacy/build/pdf";
-GlobalWorkerOptions.workerSrc = "pdfjs-dist/build/pdf.worker.min.js";
+import pdfParse from "pdf-parse";
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string[]> {
-  // Load the PDF into pdf.js
-  const loadingTask = pdfjsLib.getDocument({ data: buffer });
-  const pdf = await loadingTask.promise;
-
-  const pages: string[] = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const textContent = await page.getTextContent();
-    const pageText = textContent.items.map((item: any) => item.str).join(" ");
-    pages.push(pageText);
+  try {
+    // Use pdf-parse for simple text extraction
+    const pdfData = await pdfParse(buffer);
+    
+    // Split by common page break patterns or treat as single page
+    const fullText = pdfData.text;
+    
+    // Try to split by page breaks if they exist
+    let pages: string[] = [];
+    if (fullText.includes('\f')) {
+      // Use form feed character as page break
+      pages = fullText.split('\f').filter(page => page.trim().length > 0);
+    } else if (fullText.includes('\n\n')) {
+      // Use double newlines as potential page breaks (less reliable)
+      const paragraphs = fullText.split('\n\n');
+      // Group paragraphs into pages (rough approximation)
+      const paragraphsPerPage = Math.max(1, Math.ceil(paragraphs.length / pdfData.numpages));
+      for (let i = 0; i < paragraphs.length; i += paragraphsPerPage) {
+        const pageText = paragraphs.slice(i, i + paragraphsPerPage).join('\n\n');
+        if (pageText.trim()) {
+          pages.push(pageText);
+        }
+      }
+    } else {
+      // Single page
+      pages = [fullText];
+    }
+    
+    return pages;
+  } catch (error) {
+    console.error('PDF parsing error:', error);
+    throw new Error('Failed to extract text from PDF');
   }
-
-  return pages;
 }
 
 export async function POST(req: NextRequest) {
