@@ -84,7 +84,7 @@ export function Navbar() {
             {user ? (
               <>
                 {/* Questions Progress */}
-                <QuestionsProgress />
+                <QuestionsProgress userData={userData} />
 
                 {/* Question Bank Button */}
                 <Link href="/question-bank">
