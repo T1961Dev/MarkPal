@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -67,7 +67,7 @@ const difficulties = [
   { value: 'hard', label: 'Hard' }
 ]
 
-export default function QuestionBank() {
+function QuestionBankContent() {
   const { user, session } = useAuth()
   const searchParams = useSearchParams()
   const [userData, setUserData] = useState<UserType | null>(null)
@@ -605,4 +605,31 @@ export default function QuestionBank() {
       </div>
     )
   }
+}
+
+export default function QuestionBank() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="space-y-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Question Bank</h1>
+              <p className="text-muted-foreground mt-2">
+                Practice with GCSE questions and get instant feedback
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading question bank...</p>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    }>
+      <QuestionBankContent />
+    </Suspense>
+  )
 }
