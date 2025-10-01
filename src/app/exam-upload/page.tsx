@@ -6,11 +6,29 @@ import { ExamUploadSection } from "@/components/exam-upload-section"
 import { PricingPopup } from "@/components/pricing-popup"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { getUser, User as UserType } from "@/lib/supabase"
 
 export default function ExamUploadPage() {
-  const { user } = useAuth()
+  const { user, session } = useAuth()
+  const [userData, setUserData] = useState<UserType | null>(null)
   const [showPricing, setShowPricing] = useState(false)
+
+  // Load user data
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (user && session) {
+        try {
+          const data = await getUser(user.id, session.access_token)
+          setUserData(data)
+        } catch (error) {
+          console.error('Error loading user data:', error)
+        }
+      }
+    }
+
+    loadUserData()
+  }, [user, session])
 
   return (
     <DashboardLayout>
@@ -34,7 +52,7 @@ export default function ExamUploadPage() {
         />
 
         {/* Pro+ Features Section - Only show for non-Pro+ users */}
-        {user?.tier !== 'pro+' && (
+        {userData?.tier !== 'pro+' && (
           <div className="space-y-6">
             <div>
               <h2 className="text-2xl font-bold mb-2">Pro+ Features</h2>
