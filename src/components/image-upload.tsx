@@ -3,7 +3,7 @@
 import React, { useRef, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Camera, CheckCircle } from "lucide-react"
+import { Camera, CheckCircle, Image } from "lucide-react"
 
 interface ImageUploadProps {
   onImageUpload: (imageData: string) => void
@@ -41,6 +41,20 @@ export function ImageUpload({
 
   const handleCameraClick = () => {
     fileInputRef.current?.click()
+  }
+
+  const handleGalleryClick = () => {
+    // Create a new file input without capture attribute for gallery access
+    const galleryInput = document.createElement('input')
+    galleryInput.type = 'file'
+    galleryInput.accept = 'image/*'
+    galleryInput.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        handleFileSelect(file)
+      }
+    }
+    galleryInput.click()
   }
 
   const handleRemoveImage = () => {
@@ -106,15 +120,26 @@ export function ImageUpload({
           </Button>
         </div>
       ) : (
-        <Button
-          onClick={handleCameraClick}
-          variant="outline"
-          size="sm"
-          className="h-10 w-10 p-0 text-primary border-primary hover:bg-primary hover:text-primary-foreground transition-colors shadow-md rounded-full flex items-center justify-center"
-          title="Upload image"
-        >
-          <Camera className="w-5 h-5" />
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleCameraClick}
+            variant="outline"
+            size="sm"
+            className="h-10 w-10 p-0 text-primary border-primary hover:bg-primary hover:text-primary-foreground transition-colors shadow-md rounded-full flex items-center justify-center"
+            title="Take photo"
+          >
+            <Camera className="w-5 h-5" />
+          </Button>
+          <Button
+            onClick={handleGalleryClick}
+            variant="outline"
+            size="sm"
+            className="h-10 w-10 p-0 text-primary border-primary hover:bg-primary hover:text-primary-foreground transition-colors shadow-md rounded-full flex items-center justify-center"
+            title="Choose from gallery"
+          >
+            <Image className="w-5 h-5" />
+          </Button>
+        </div>
       )}
     </div>
   )
