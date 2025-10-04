@@ -59,7 +59,9 @@ export function MarkSchemeDialog({
       line.includes('do not accept') ||
       line.includes('ignore') ||
       line.includes('AO / Spec Ref:') ||
-      line.match(/^\d+\./) // Numbered points like "1. biconcave shape"
+      line.match(/^\d+\./) || // Numbered points like "1. biconcave shape"
+      line.includes('Award marks for:') || // Question bank format
+      line.match(/\d+\)/) // Numbered points like "1) Light energy"
     )
 
     if (!hasStructuredFormat) {
@@ -71,6 +73,43 @@ export function MarkSchemeDialog({
         }],
         extraInfo: []
       }
+    }
+
+    // Check if this is the question bank format (Award marks for: 1) point (1 mark), 2) point (1 mark))
+    const isQuestionBankFormat = lines.some(line => line.includes('Award marks for:'))
+    
+    if (isQuestionBankFormat) {
+      // Parse question bank format
+      for (const line of lines) {
+        const trimmedLine = line.trim()
+        if (!trimmedLine) continue
+        
+        if (trimmedLine.includes('Award marks for:')) {
+          // Extract all the numbered points from this line
+          const pointsText = trimmedLine.replace('Award marks for:', '').trim()
+          
+          // Split by numbered points (1), 2), 3), etc.)
+          const pointMatches = pointsText.match(/\d+\)[^)]*\([^)]*mark[^)]*\)/g)
+          
+          if (pointMatches) {
+            for (const pointMatch of pointMatches) {
+              // Extract the point text and mark
+              const markMatch = pointMatch.match(/\((\d+)\s*mark[^)]*\)/)
+              const pointText = pointMatch.replace(/\d+\)\s*/, '').replace(/\s*\([^)]*mark[^)]*\)/, '').trim()
+              
+              if (pointText && markMatch) {
+                points.push({
+                  answer: pointText,
+                  mark: parseInt(markMatch[1]),
+                  aoSpecRef: ''
+                })
+              }
+            }
+          }
+        }
+      }
+      
+      return { points, extraInfo: [] }
     }
 
     // Parse structured mark scheme

@@ -3,6 +3,14 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
+// Debug: Check if environment variables are loaded
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase environment variables:', {
+    url: !!supabaseUrl,
+    anonKey: !!supabaseAnonKey
+  })
+}
+
 // Single client instance to prevent multiple instances
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -274,10 +282,12 @@ export const getUser = async (userId: string, accessToken?: string): Promise<Use
           if (authUser.user?.user_metadata?.name) {
             fullName = authUser.user.user_metadata.name
           }
+          const email = authUser.user?.email || ''
+          return createUser(userId, accessToken, fullName, email)
         } catch (metadataError) {
           console.log('Could not fetch auth user metadata:', metadataError)
+          return createUser(userId, accessToken, fullName, '')
         }
-        return createUser(userId, accessToken, fullName)
       }
       console.error('Error fetching user:', error)
       throw error
@@ -291,19 +301,20 @@ export const getUser = async (userId: string, accessToken?: string): Promise<Use
   }
 }
 
-export const createUser = async (userId: string, accessToken?: string, fullName?: string): Promise<User> => {
+export const createUser = async (userId: string, accessToken?: string, fullName?: string, email?: string): Promise<User> => {
   const client = createServerSupabaseClient(accessToken)
   
   try {
     const { data, error } = await client
       .from('users')
       .insert([{ 
-        id: userId, 
+        id: userId,
+        email: email || '',
         tier: 'free', 
         questionsLeft: 5,
         questions_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
         has_seen_welcome: false, // New users haven't seen the welcome popup yet
-        full_name: fullName || ''
+        fullName: fullName || ''
       }])
       .select()
       .single()
@@ -322,7 +333,7 @@ export const createUser = async (userId: string, accessToken?: string, fullName?
           tier: 'free', 
           questionsLeft: 5,
           questions_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          full_name: fullName || ''
+          fullName: fullName || ''
         }])
         .select()
         .single()

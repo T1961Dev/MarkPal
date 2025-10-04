@@ -33,14 +33,14 @@ Run the trigger creation script to automatically create user records:
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.users (id, tier, questions_left, questions_reset_date, has_seen_welcome, full_name)
+  INSERT INTO public.users (id, tier, "questionsLeft", questions_reset_date, has_seen_welcome, "fullName")
   VALUES (
     NEW.id,
     'free',
     5,
     (CURRENT_DATE + INTERVAL '30 days')::date,
     false,
-    NEW.raw_user_meta_data->>'name'
+    NEW.raw_user_meta_data->>'display_name'
   );
   RETURN NEW;
 END;
@@ -55,6 +55,10 @@ CREATE TRIGGER on_auth_user_created
 -- Grant permissions
 GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
 GRANT ALL ON public.users TO postgres, anon, authenticated, service_role;
+
+-- Create a policy to allow the trigger function to insert user records
+CREATE POLICY "Allow trigger to create user records" ON public.users
+  FOR INSERT WITH CHECK (true);
 ```
 
 ## 2. How It Works

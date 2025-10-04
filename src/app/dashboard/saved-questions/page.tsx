@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
-import { SavedQuestionDialog } from "@/components/saved-question-dialog"
 import { 
   Bookmark, 
   Search, 
@@ -22,7 +21,7 @@ import {
   Layers
 } from "lucide-react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { SavedQuestionVersionsDialog } from "@/components/saved-question-versions-dialog"
 
 interface SavedQuestion {
@@ -57,11 +56,10 @@ interface SavedQuestion {
 function SavedQuestionsContent() {
   const { user } = useAuth()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [savedQuestions, setSavedQuestions] = useState<SavedQuestion[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null)
   const [versionsDialogOpen, setVersionsDialogOpen] = useState(false)
   const [selectedQuestionVersions, setSelectedQuestionVersions] = useState<SavedQuestion[]>([])
   const [selectedQuestionName, setSelectedQuestionName] = useState("")
@@ -79,13 +77,6 @@ function SavedQuestionsContent() {
     }
   }
 
-  useEffect(() => {
-    const viewParam = searchParams.get('view')
-    if (viewParam) {
-      setSelectedQuestionId(viewParam)
-      setDialogOpen(true)
-    }
-  }, [searchParams])
 
   const fetchSavedQuestions = async () => {
     try {
@@ -111,14 +102,9 @@ function SavedQuestionsContent() {
   }
 
   const handleViewQuestion = (questionId: string) => {
-    setSelectedQuestionId(questionId)
-    setDialogOpen(true)
+    router.push(`/dashboard/saved-questions/${questionId}`)
   }
 
-  const handleCloseDialog = () => {
-    setDialogOpen(false)
-    setSelectedQuestionId(null)
-  }
 
   const handleViewVersions = (questionKey: string, questionName: string) => {
     const versions = groupedQuestions[questionKey] || []
@@ -424,12 +410,6 @@ function SavedQuestionsContent() {
           </Card>
         )}
 
-        {/* Saved Question Dialog */}
-        <SavedQuestionDialog
-          isOpen={dialogOpen}
-          onClose={handleCloseDialog}
-          questionId={selectedQuestionId}
-        />
 
         {/* Versions Dialog */}
         <SavedQuestionVersionsDialog

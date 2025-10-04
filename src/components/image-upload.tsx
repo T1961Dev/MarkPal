@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useRef } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Camera, CheckCircle } from "lucide-react"
@@ -19,6 +19,7 @@ export function ImageUpload({
   className = ""
 }: ImageUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const handleFileSelect = (file: File) => {
     if (file && file.type.startsWith('image/')) {
@@ -49,12 +50,42 @@ export function ImageUpload({
     }
   }
 
+  const handlePaste = (e: ClipboardEvent) => {
+    e.preventDefault()
+    const items = e.clipboardData?.items
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) {
+            handleFileSelect(file)
+            // Show visual feedback
+            console.log('Image pasted successfully!')
+          }
+          break
+        }
+      }
+    }
+  }
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (container) {
+      container.addEventListener('paste', handlePaste)
+      return () => {
+        container.removeEventListener('paste', handlePaste)
+      }
+    }
+  }, [])
+
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
+    <div ref={containerRef} className={`flex items-center justify-center gap-3 ${className}`}>
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        capture="environment"
         onChange={handleFileInputChange}
         className="hidden"
       />
@@ -75,13 +106,13 @@ export function ImageUpload({
           </Button>
         </div>
       ) : (
-                 <Button
-           onClick={handleCameraClick}
-           variant="outline"
-           size="sm"
-           className="h-10 w-10 p-0 text-primary border-primary hover:bg-primary hover:text-primary-foreground transition-colors shadow-md rounded-full"
-           title="Upload image"
-         >
+        <Button
+          onClick={handleCameraClick}
+          variant="outline"
+          size="sm"
+          className="h-10 w-10 p-0 text-primary border-primary hover:bg-primary hover:text-primary-foreground transition-colors shadow-md rounded-full flex items-center justify-center"
+          title="Upload image"
+        >
           <Camera className="w-5 h-5" />
         </Button>
       )}

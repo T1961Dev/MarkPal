@@ -10,7 +10,7 @@ import { Upload, FileText, CheckCircle, Loader2, ArrowRight, ArrowLeft, Save, X 
 import { PDFUploader } from "@/components/pdf-uploader"
 import { PricingPopup } from "@/components/pricing-popup"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { getUser, User } from "@/lib/supabase"
+import { getUser, User, supabase } from "@/lib/supabase"
 import { ExtractedQuestion, PDFMetadata } from "@/types/exam-types"
 
 interface ExamUploadFlowProps {
@@ -273,12 +273,16 @@ export function ExamUploadFlow({ onQuestionsExtracted, onError }: ExamUploadFlow
 
   const handleSaveQuestions = async () => {
     try {
+      // Get current session for authentication
+      const { data: { session } } = await supabase.auth.getSession()
+      
       // Save each question to the question bank
       for (const question of extractedQuestions) {
         const response = await fetch('/api/questions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
           },
           body: JSON.stringify({
             question: question.text,
@@ -295,7 +299,8 @@ export function ExamUploadFlow({ onQuestionsExtracted, onError }: ExamUploadFlow
         })
 
         if (!response.ok) {
-          throw new Error(`Failed to save question ${question.questionNumber}`)
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || `Failed to save question ${question.questionNumber}`)
         }
       }
 

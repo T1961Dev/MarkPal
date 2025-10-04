@@ -38,6 +38,40 @@ function determineSubject(filename: string, content: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    // Check user authentication and Pro+ plan
+    const supabase = createAdminSupabaseClient();
+    const authHeader = req.headers.get('authorization');
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
+    }
+    
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    
+    if (authError || !user) {
+      return NextResponse.json({ success: false, error: "Invalid authentication" }, { status: 401 });
+    }
+    
+    // Get user's plan tier
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('tier')
+      .eq('id', user.id)
+      .single();
+    
+    if (userError || !userData) {
+      return NextResponse.json({ success: false, error: "User data not found" }, { status: 404 });
+    }
+    
+    // Check if user has Pro+ plan
+    if (userData.tier !== 'pro+') {
+      return NextResponse.json({ 
+        success: false, 
+        error: "Pro+ plan required for exam paper uploads. Please upgrade your plan to access this feature." 
+      }, { status: 403 });
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const paperId = formData.get("paperId") as string;

@@ -37,6 +37,7 @@ import {
   HelpCircle,
   Menu,
   Upload,
+  Crown,
 } from "lucide-react"
 import { ProfileDropdown } from "./profile-dropdown"
 import { ProfileSettingsDialog } from "./profile-settings-dialog"
@@ -62,11 +63,6 @@ const navigationItems: NavigationItem[] = [
     title: "Dashboard",
     url: "/dashboard",
     icon: Home,
-  },
-  {
-    title: "Question Bank",
-    url: "/dashboard/question-bank",
-    icon: BookOpen,
   },
   {
     title: "Upload Question",
@@ -213,6 +209,48 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       )
                     }
 
+                    // Special handling for Upload Question - Pro+ restriction
+                    if (item.title === "Upload Question") {
+                      const isProPlus = userData?.tier === 'pro+'
+                      return (
+                        <SidebarMenuItem key={item.title}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <SidebarMenuButton
+                                className={`w-full justify-start ${!isProPlus ? 'text-muted-foreground cursor-not-allowed' : ''}`}
+                                onClick={(e) => {
+                                  if (!isProPlus) {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    setPricingPopupOpen(true)
+                                  }
+                                }}
+                                asChild={isProPlus}
+                              >
+                                {isProPlus ? (
+                                  <Link href={item.url}>
+                                    <div className="flex items-center gap-2">
+                                      <item.icon className="h-4 w-4" />
+                                      <span>{item.title}</span>
+                                    </div>
+                                  </Link>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <item.icon className="h-4 w-4" />
+                                    <span>{item.title}</span>
+                                    <Crown className="h-4 w-4 text-blue-600" />
+                                  </div>
+                                )}
+                              </SidebarMenuButton>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{isProPlus ? 'Practice with AI feedback' : 'Pro+ plan required for practice sessions'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </SidebarMenuItem>
+                      )
+                    }
+
                     // Regular navigation items
                     return (
                       <SidebarMenuItem key={item.title}>
@@ -307,12 +345,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
             <div className="flex items-center gap-4">
               {/* Quick Actions */}
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/dashboard/practice">
+              {userData?.tier === 'pro+' ? (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/dashboard/practice">
+                    <Target className="h-4 w-4 mr-2" />
+                    Quick Practice
+                  </Link>
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setPricingPopupOpen(true)}
+                  className="text-muted-foreground"
+                >
                   <Target className="h-4 w-4 mr-2" />
                   Quick Practice
-                </Link>
-              </Button>
+                  <Crown className="h-4 w-4 ml-2 text-blue-600" />
+                </Button>
+              )}
             </div>
           </header>
 

@@ -66,6 +66,7 @@ export default function Practice() {
   const [studentAnswer, setStudentAnswer] = useState("")
   const [maxMarks, setMaxMarks] = useState("")
   const [questionImage, setQuestionImage] = useState("")
+  const [studentAnswerImage, setStudentAnswerImage] = useState("")
   const [markSchemeImage, setMarkSchemeImage] = useState("")
   const [showMarkScheme, setShowMarkScheme] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
@@ -79,12 +80,61 @@ export default function Practice() {
   const [pricingPopupOpen, setPricingPopupOpen] = useState(false)
   const [isLiveMode, setIsLiveMode] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [formattedMarkScheme, setFormattedMarkScheme] = useState<string>("")
+  const [formattingMarkScheme, setFormattingMarkScheme] = useState(false)
 
   useEffect(() => {
     if (user) {
       loadUserData()
     }
   }, [user])
+
+  // Global paste handler for images
+  useEffect(() => {
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i]
+          if (item.type.startsWith('image/')) {
+            e.preventDefault()
+            const file = item.getAsFile()
+            if (file) {
+              const reader = new FileReader()
+              reader.onload = (event) => {
+                const result = event.target?.result as string
+                // Determine which step we're on and set the appropriate image
+                if (currentSlide === 0) {
+                  setQuestionImage(result)
+                  toast.success("Question image pasted successfully!")
+                } else if (currentSlide === 1) {
+                  setStudentAnswerImage(result)
+                  toast.success("Answer image pasted successfully!")
+                } else if (currentSlide === 2) {
+                  setMarkSchemeImage(result)
+                  toast.success("Mark scheme image pasted successfully!")
+                }
+              }
+              reader.readAsDataURL(file)
+            }
+            break
+          }
+        }
+      }
+    }
+
+    document.addEventListener('paste', handleGlobalPaste)
+    return () => {
+      document.removeEventListener('paste', handleGlobalPaste)
+    }
+  }, [currentSlide])
+
+  // Redirect non-Pro+ users
+  useEffect(() => {
+    if (userData && userData.tier !== 'pro+') {
+      window.location.href = '/dashboard'
+    }
+  }, [userData])
 
   const loadUserData = async () => {
     if (!user) return
@@ -97,6 +147,40 @@ export default function Practice() {
       console.error('Error loading user data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const formatMarkScheme = async () => {
+    if (!markScheme.trim()) return
+    
+    try {
+      setFormattingMarkScheme(true)
+      const response = await fetch('/api/format-mark-scheme', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          markSchemeText: markScheme,
+          questionText: question,
+          maxMarks: parseInt(maxMarks) || 10
+        }),
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setFormattedMarkScheme(result.formattedMarkScheme)
+      } else {
+        // Fallback to original mark scheme if formatting fails
+        setFormattedMarkScheme(markScheme)
+      }
+    } catch (error) {
+      console.error('Error formatting mark scheme:', error)
+      // Fallback to original mark scheme
+      setFormattedMarkScheme(markScheme)
+    } finally {
+      setFormattingMarkScheme(false)
     }
   }
 
@@ -124,15 +208,15 @@ export default function Practice() {
       
       // Validate current slide before proceeding
       if (currentSlide === 0 && !question.trim() && !questionImage) {
-        showValidationMessage("Please enter your question or upload an image before continuing")
+        showValidationMessage("Please upload an image or enter your question before continuing")
         return
       }
-      if (currentSlide === 1 && !markScheme.trim() && !markSchemeImage) {
+      if (currentSlide === 1 && !studentAnswer.trim() && !studentAnswerImage) {
+        showValidationMessage("Please upload an image or enter your answer before continuing")
+        return
+      }
+      if (currentSlide === 2 && !markScheme.trim() && !markSchemeImage) {
         showValidationMessage("Please enter the mark scheme or upload an image before continuing")
-        return
-      }
-      if (currentSlide === 2 && !studentAnswer.trim()) {
-        showValidationMessage("Please enter your answer before continuing")
         return
       }
       
@@ -152,7 +236,7 @@ export default function Practice() {
   const handleKeyPress = (e: React.KeyboardEvent, slideIndex: number) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
-      if (slideIndex < 3) {
+      if (slideIndex === 0 || slideIndex === 1) {
         nextSlide()
       } else if (slideIndex === 2) {
         handleEvaluate()
@@ -161,11 +245,8 @@ export default function Practice() {
   }
 
   // AI Processing Function
-  const processFeedback = async (question: string, markScheme: string, studentAnswer: string, maxMarks: number, questionImg?: string, markSchemeImg?: string): Promise<FeedbackResult> => {
+  const processFeedback = async (question: string, markScheme: string, studentAnswer: string, maxMarks: number, questionImg?: string, markSchemeImg?: string, studentAnswerImg?: string): Promise<FeedbackResult> => {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 second timeout for faster UX
-      
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
@@ -178,13 +259,11 @@ export default function Practice() {
           maxMarks,
           questionImage: questionImg || undefined,
           markSchemeImage: markSchemeImg || undefined,
+          studentAnswerImage: studentAnswerImg,
           userId: user?.id,
           accessToken: session?.access_token
         }),
-        signal: controller.signal,
       })
-      
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json()
@@ -205,7 +284,7 @@ export default function Practice() {
       console.error('Error calling analysis API:', error)
       
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Analysis timed out. Please try again.')
+        throw new Error('Analysis timed out. Please try again with a shorter answer.')
       }
       
       // Fast fallback analysis
@@ -251,7 +330,7 @@ export default function Practice() {
   }
 
   const handleEvaluate = async () => {
-    if ((!question.trim() && !questionImage) || !studentAnswer.trim()) return
+    if ((!question.trim() && !questionImage) || (!studentAnswer.trim() && !studentAnswerImage)) return
     
     checkAuthAndProceed(async () => {
       // Check if user has questions left before evaluating
@@ -264,17 +343,25 @@ export default function Practice() {
       
       try {
         const maxMarksValue = parseInt(maxMarks) || 10
-        const result = await processFeedback(question, markScheme, studentAnswer, maxMarksValue, questionImage, markSchemeImage)
+        const result = await processFeedback(question, markScheme, studentAnswer, maxMarksValue, questionImage, markSchemeImage, studentAnswerImage)
         
-        setFeedbackResult(result)
-        setShowFeedback(true)
-        setCurrentSlide(3)
+      setFeedbackResult(result)
+      setShowFeedback(true)
+      setCurrentSlide(3)
+      
+      // Format the mark scheme for better display
+      await formatMarkScheme()
         
         // Refresh questions progress
         window.dispatchEvent(new Event('questionsUsed'))
       } catch (error) {
         console.error('Error processing feedback:', error)
-        showValidationMessage("Failed to analyze your answer. Please try again.")
+        console.error('Error details:', error)
+        if (error instanceof Error) {
+          showValidationMessage(`Failed to analyze your answer: ${error.message}`)
+        } else {
+          showValidationMessage("Failed to analyze your answer. Please try again.")
+        }
       } finally {
         setIsProcessing(false)
       }
@@ -378,7 +465,20 @@ export default function Practice() {
     )
   }
 
-  if (!user) {
+  if (!user || loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (userData && userData.tier !== 'pro+') {
     return null // Will redirect
   }
 
@@ -448,25 +548,46 @@ export default function Practice() {
                   Step 1: Enter Your Question
                 </CardTitle>
                 <CardDescription>
-                  Paste the exam question you want to practice with
+                  Upload an image of your exam question or type it manually
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <Textarea
-                  placeholder="e.g., Explain the process of photosynthesis and its importance to life on Earth. (10 marks)"
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  onKeyDown={(e) => handleKeyPress(e, 0)}
-                  className="min-h-[150px] text-lg"
-                  autoFocus
-                />
-                <div className="flex items-center justify-between">
+                {/* Primary: Image Upload */}
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold mb-2">Upload Question Image</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Take a photo, upload an image, or press <kbd className="px-2 py-1 bg-muted rounded text-xs">Ctrl+V</kbd> to paste
+                    </p>
+                  </div>
                   <ImageUpload
                     onImageUpload={setQuestionImage}
                     onImageRemove={() => setQuestionImage("")}
                     currentImage={questionImage}
+                    className="min-h-[200px] border-2 border-dashed border-primary/20 hover:border-primary/40 transition-colors"
                   />
-                  <Button onClick={nextSlide} disabled={isAnimating}>
+                </div>
+
+                {/* Secondary: Text Input */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="h-4 w-4" />
+                    <span>Or type your question manually</span>
+                  </div>
+                  <Textarea
+                    placeholder="Type your question here if you prefer text input..."
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                    onKeyDown={(e) => handleKeyPress(e, 0)}
+                    className="min-h-[100px] text-sm"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    {questionImage ? "Image uploaded" : question.trim() ? "Text entered" : "Upload image or enter text"}
+                  </div>
+                  <Button onClick={nextSlide} disabled={isAnimating || (!question.trim() && !questionImage)}>
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
@@ -478,74 +599,45 @@ export default function Practice() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Step 2: Enter Mark Scheme
-                </CardTitle>
-                <CardDescription>
-                  Paste the official mark scheme or marking criteria
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <Textarea
-                  placeholder="e.g., Level 3 (7-10 marks): Detailed explanation including reactants, products, and energy conversion..."
-                  value={markScheme}
-                  onChange={(e) => setMarkScheme(e.target.value)}
-                  onKeyDown={(e) => handleKeyPress(e, 1)}
-                  className="min-h-[150px] text-lg"
-                  autoFocus
-                />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <Button variant="outline" onClick={prevSlide} disabled={isAnimating}>
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      Back
-                    </Button>
-                    {markScheme.trim() && (
-                      <MarkSchemeDialog 
-                        questionNumber="Preview" 
-                        markScheme={markScheme} 
-                        maxMarks={parseInt(maxMarks) || 10}
-                      >
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-2" />
-                          Preview Mark Scheme
-                        </Button>
-                      </MarkSchemeDialog>
-                    )}
-                    <ImageUpload
-                      onImageUpload={setMarkSchemeImage}
-                      onImageRemove={() => setMarkSchemeImage("")}
-                      currentImage={markSchemeImage}
-                    />
-                  </div>
-                  <Button onClick={nextSlide} disabled={isAnimating}>
-                    Next <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {currentSlide === 2 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
                   <PenTool className="h-5 w-5" />
-                  Step 3: Write Your Answer
+                  Step 2: Write Your Answer
                 </CardTitle>
                 <CardDescription>
-                  Write your best attempt at answering the question
+                  Upload an image of your written answer or type it manually
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <Textarea
-                  placeholder="e.g., Photosynthesis is the process where plants make food using sunlight and water to produce glucose and oxygen..."
-                  value={studentAnswer}
-                  onChange={(e) => setStudentAnswer(e.target.value)}
-                  onKeyDown={(e) => handleKeyPress(e, 2)}
-                  className="min-h-[180px] text-lg"
-                  autoFocus
-                />
+                {/* Primary: Image Upload */}
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold mb-2">Upload Your Answer</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Take a photo, upload an image, or press <kbd className="px-2 py-1 bg-muted rounded text-xs">Ctrl+V</kbd> to paste
+                    </p>
+                  </div>
+                  <ImageUpload
+                    onImageUpload={setStudentAnswerImage}
+                    onImageRemove={() => setStudentAnswerImage("")}
+                    currentImage={studentAnswerImage}
+                    className="min-h-[200px] border-2 border-dashed border-primary/20 hover:border-primary/40 transition-colors"
+                  />
+                </div>
+
+                {/* Secondary: Text Input */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="h-4 w-4" />
+                    <span>Or type your answer manually</span>
+                  </div>
+                  <Textarea
+                    placeholder="Type your answer here if you prefer text input..."
+                    value={studentAnswer}
+                    onChange={(e) => setStudentAnswer(e.target.value)}
+                    onKeyDown={(e) => handleKeyPress(e, 1)}
+                    className="min-h-[100px] text-sm"
+                  />
+                </div>
+
                 <div className="flex items-center justify-center gap-4">
                   <Label htmlFor="maxMarks" className="text-lg font-medium">
                     Max Marks:
@@ -559,20 +651,87 @@ export default function Practice() {
                     className="w-24 text-lg"
                   />
                 </div>
+
                 <div className="flex items-center justify-between">
-                  <Button variant="outline" onClick={prevSlide} disabled={isAnimating}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back
-                  </Button>
-                  <ProgressButton 
-                    onClick={handleEvaluate}
-                    disabled={!question || !studentAnswer || !markScheme || isProcessing}
-                    className="bg-primary hover:bg-primary/90"
-                    duration={6000}
-                    icon={<Sparkles className="w-4 h-4 mr-2" />}
-                  >
-                    Get Feedback
-                  </ProgressButton>
+                  <div className="text-sm text-muted-foreground">
+                    {studentAnswerImage ? "Answer image uploaded" : studentAnswer.trim() ? "Answer text entered" : "Upload image or enter text"}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={prevSlide} disabled={isAnimating}>
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Back
+                    </Button>
+                    <Button onClick={nextSlide} disabled={isAnimating || (!studentAnswer.trim() && !studentAnswerImage)}>
+                      Next <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {currentSlide === 2 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Step 3: Enter Mark Scheme
+                </CardTitle>
+                <CardDescription>
+                  Upload an image of the mark scheme or paste it manually
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Primary: Image Upload */}
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold mb-2">Upload Mark Scheme</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Take a photo, upload an image, or press <kbd className="px-2 py-1 bg-muted rounded text-xs">Ctrl+V</kbd> to paste
+                    </p>
+                  </div>
+                  <ImageUpload
+                    onImageUpload={setMarkSchemeImage}
+                    onImageRemove={() => setMarkSchemeImage("")}
+                    currentImage={markSchemeImage}
+                    className="min-h-[200px] border-2 border-dashed border-primary/20 hover:border-primary/40 transition-colors"
+                  />
+                </div>
+
+                {/* Secondary: Text Input */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <FileText className="h-4 w-4" />
+                    <span>Or paste the mark scheme manually</span>
+                  </div>
+                  <Textarea
+                    placeholder="Paste the mark scheme here if you prefer text input..."
+                    value={markScheme}
+                    onChange={(e) => setMarkScheme(e.target.value)}
+                    onKeyDown={(e) => handleKeyPress(e, 2)}
+                    className="min-h-[100px] text-sm"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    {markSchemeImage ? "Mark scheme image uploaded" : markScheme.trim() ? "Mark scheme text entered" : "Upload image or enter text"}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={prevSlide} disabled={isAnimating}>
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Back
+                    </Button>
+                    <ProgressButton 
+                      onClick={handleEvaluate}
+                      disabled={(!question.trim() && !questionImage) || (!studentAnswer.trim() && !studentAnswerImage) || (!markScheme.trim() && !markSchemeImage) || isProcessing}
+                      className="bg-primary hover:bg-primary/90"
+                      duration={6000}
+                      icon={<Sparkles className="w-4 h-4 mr-2" />}
+                    >
+                      Get Feedback
+                    </ProgressButton>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -666,6 +825,45 @@ export default function Practice() {
                 </div>
               )}
 
+              {/* Mark Scheme Viewer */}
+              <Card className="mt-8">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Mark Scheme
+                  </CardTitle>
+                  <CardDescription>
+                    Review the official mark scheme for this question
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="text-sm text-muted-foreground">
+                      <strong>Question:</strong> {question}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      <strong>Max Marks:</strong> {maxMarks}
+                    </div>
+                    <div className="mt-4">
+                      <MarkSchemeDialog 
+                        questionNumber="Practice Question" 
+                        markScheme={formattedMarkScheme || markScheme} 
+                        maxMarks={parseInt(maxMarks) || 10}
+                      >
+                        <Button 
+                          variant="outline" 
+                          className="w-full"
+                          disabled={formattingMarkScheme}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          {formattingMarkScheme ? 'Formatting...' : 'View Mark Scheme'}
+                        </Button>
+                      </MarkSchemeDialog>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Action Buttons */}
               <div className="flex items-center justify-center gap-4">
                 <Button
@@ -685,7 +883,9 @@ export default function Practice() {
                     setStudentAnswer("")
                     setMaxMarks("")
                     setQuestionImage("")
+                    setStudentAnswerImage("")
                     setMarkSchemeImage("")
+                    setFormattedMarkScheme("")
                   }}
                 >
                   Try Another Question

@@ -1,17 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { CheckCircle, Star, Zap, Crown, X } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Check, Star, Zap, Crown } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 import { toast } from "sonner"
 
 interface WelcomePopupProps {
@@ -20,19 +15,126 @@ interface WelcomePopupProps {
   onUpgrade: (tier: 'basic' | 'pro' | 'pro+') => void
 }
 
+const plans = [
+  {
+    name: 'Free',
+    tier: 'free' as const,
+    price: '£0',
+    period: 'forever',
+    description: 'Perfect for trying out the system',
+    icon: Star,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+    features: [
+      '5 questions per month',
+      'Basic AI feedback',
+      'All subjects supported',
+      'Save your questions'
+    ],
+    buttonText: 'Start with Free',
+    popular: false,
+    isFree: true
+  },
+  {
+    name: 'Basic',
+    tier: 'basic' as const,
+    price: '£10',
+    period: 'per month',
+    description: 'Great for regular students',
+    icon: Star,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+    features: [
+      '20 questions per month',
+      'Enhanced AI feedback',
+      'Progress tracking',
+      'Priority support'
+    ],
+    buttonText: 'Start Basic Plan',
+    popular: false
+  },
+  {
+    name: 'Pro',
+    tier: 'pro' as const,
+    price: '£20',
+    period: 'per month',
+    description: 'Best for serious students',
+    icon: Zap,
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+    features: [
+      '50 questions per month',
+      'Advanced AI feedback',
+      'Detailed analytics',
+      'Live mode practice'
+    ],
+    buttonText: 'Start Pro Plan',
+    popular: true
+  },
+  {
+    name: 'Pro+',
+    tier: 'pro+' as const,
+    price: '£25',
+    period: 'per month',
+    description: 'Ultimate for power users',
+    icon: Crown,
+    color: 'text-amber-600',
+    bgColor: 'bg-amber-50',
+    features: [
+      '<strong>Unlimited</strong> questions per month',
+      '<strong>Exam paper upload</strong> - Upload and extract questions from full exam papers',
+      '<strong>Save papers</strong> - Store and organize uploaded exam papers',
+      '<strong>Advanced analytics</strong> - Detailed performance insights'
+    ],
+    buttonText: 'Start Pro+ Plan',
+    popular: false
+  }
+]
+
 export function WelcomePopup({ isOpen, onClose, onUpgrade }: WelcomePopupProps) {
-  const [loading, setLoading] = useState<string | null>(null)
+  const [selectedPlan, setSelectedPlan] = useState<'free' | 'basic' | 'pro' | 'pro+' | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const { user } = useAuth()
 
   const handleUpgrade = async (tier: 'basic' | 'pro' | 'pro+') => {
-    setLoading(tier)
+    if (!user) {
+      toast.error('Please log in to upgrade your plan')
+      return
+    }
+
+    setIsLoading(true)
     try {
-      onUpgrade(tier)
-      onClose()
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tier: tier,
+          userId: user.id,
+        }),
+      })
+
+      const { url, error } = await response.json()
+
+      if (error) {
+        console.error('Error creating checkout session:', error)
+        toast.error('Failed to create checkout session. Please try again.')
+        return
+      }
+
+      if (!url) {
+        toast.error('No checkout URL received. Please try again.')
+        return
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = url
     } catch (error) {
-      console.error('Error upgrading:', error)
-      toast.error('Failed to start upgrade process')
+      console.error('Error upgrading plan:', error)
+      toast.error('An error occurred. Please try again.')
     } finally {
-      setLoading(null)
+      setIsLoading(false)
     }
   }
 
@@ -43,155 +145,99 @@ export function WelcomePopup({ isOpen, onClose, onUpgrade }: WelcomePopupProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary/20 to-accent/20 rounded-2xl flex items-center justify-center">
-            <Star className="h-8 w-8 text-primary" />
-          </div>
-          <DialogTitle className="text-3xl font-bold">
+      <DialogContent 
+        className="max-w-7xl w-full max-h-[80vh] overflow-y-auto p-6"
+        style={{ maxWidth: '80vw', width: '80vw' }}
+      >
+        <DialogHeader>
+          <DialogTitle className="text-3xl font-bold text-center">
             Welcome to Mark Pal! 🎉
           </DialogTitle>
-          <DialogDescription className="text-lg">
+          <p className="text-center text-muted-foreground text-lg">
             Choose your plan to start improving your GCSE exam technique with AI-powered feedback
-          </DialogDescription>
+          </p>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-          {/* Free Plan */}
-          <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5">
-            <CardHeader className="text-center pb-4">
-              <CardTitle className="text-2xl font-bold">Free</CardTitle>
-              <div className="text-4xl font-bold text-primary">£0</div>
-              <CardDescription className="text-base">
-                Perfect for trying out the system
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ul className="space-y-3">
-                <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="text-sm">5 questions per day</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="text-sm">Basic AI feedback</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="text-sm">All subjects supported</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="text-sm">Save your questions</span>
-                </li>
-              </ul>
-              <Button 
-                onClick={handleContinueFree}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                size="lg"
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 max-w-6xl mx-auto">
+          {plans.map((plan) => {
+            const IconComponent = plan.icon
+            
+            return (
+              <Card 
+                key={plan.tier}
+                className={`relative ${
+                  plan.popular
+                    ? 'border-primary shadow-lg'
+                    : plan.isFree
+                    ? 'border-green-200 bg-green-50/50'
+                    : 'hover:shadow-md transition-shadow'
+                }`}
               >
-                Continue with Free Plan
-              </Button>
-            </CardContent>
-          </Card>
+                {plan.popular && (
+                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2" variant="default">
+                    Most Popular
+                  </Badge>
+                )}
+                {plan.isFree && (
+                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2" variant="secondary">
+                    Perfect for Starters
+                  </Badge>
+                )}
+                
+                <CardHeader className="text-center">
+                  <div className="flex justify-center mb-4">
+                    <div className={`p-3 rounded-full ${plan.bgColor}`}>
+                      <IconComponent className={`w-6 h-6 ${plan.color}`} />
+                    </div>
+                  </div>
+                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                  <div className="space-y-1">
+                    <div className="text-4xl font-bold">{plan.price}</div>
+                    <CardDescription>{plan.period}</CardDescription>
+                  </div>
+                  <CardDescription className="mt-2">{plan.description}</CardDescription>
+                </CardHeader>
 
-          {/* Pro Plan */}
-          <Card className="border-2 border-accent relative">
-            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-              <Badge className="bg-accent text-accent-foreground px-3 py-1">
-                Most Popular
-              </Badge>
-            </div>
-            <CardHeader className="text-center pb-4 pt-6">
-              <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
-                <Zap className="h-5 w-5 text-accent" />
-                Pro
-              </CardTitle>
-              <div className="text-4xl font-bold text-accent">£9.99</div>
-              <div className="text-sm text-muted-foreground">/month</div>
-              <CardDescription className="text-base">
-                For serious students
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ul className="space-y-3">
-                <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="text-sm"><strong>Unlimited</strong> questions</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="text-sm">Advanced AI feedback</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="text-sm">Progress tracking</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="text-sm">Priority support</span>
-                </li>
-              </ul>
-              <Button 
-                onClick={() => handleUpgrade('pro')}
-                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
-                size="lg"
-                disabled={loading === 'pro'}
-              >
-                {loading === 'pro' ? 'Starting...' : 'Start Pro Plan'}
-              </Button>
-            </CardContent>
-          </Card>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3">
+                    {plan.features.map((feature, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm" dangerouslySetInnerHTML={{ __html: feature }} />
+                      </div>
+                    ))}
+                  </div>
 
-          {/* Pro+ Plan */}
-          <Card className="border-2 border-amber-500/20 bg-gradient-to-br from-amber-50/50 to-yellow-50/50 dark:from-amber-950/20 dark:to-yellow-950/20">
-            <CardHeader className="text-center pb-4">
-              <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
-                <Crown className="h-5 w-5 text-amber-600" />
-                Pro+
-              </CardTitle>
-              <div className="text-4xl font-bold text-amber-600">£19.99</div>
-              <div className="text-sm text-muted-foreground">/month</div>
-              <CardDescription className="text-base">
-                For exam success
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ul className="space-y-3">
-                <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="text-sm">Everything in Pro</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="text-sm">Live mode feedback</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="text-sm">Exam paper upload</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="text-sm">Advanced analytics</span>
-                </li>
-              </ul>
-              <Button 
-                onClick={() => handleUpgrade('pro+')}
-                variant="outline"
-                className="w-full border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
-                size="lg"
-                disabled={loading === 'pro+'}
-              >
-                {loading === 'pro+' ? 'Starting...' : 'Start Pro+ Plan'}
-              </Button>
-            </CardContent>
-          </Card>
+                  <Button
+                    className="w-full"
+                    variant={plan.isFree ? "secondary" : "default"}
+                    disabled={isLoading}
+                    onClick={() => {
+                      if (plan.isFree) {
+                        handleContinueFree()
+                      } else {
+                        setSelectedPlan(plan.tier)
+                        handleUpgrade(plan.tier)
+                      }
+                    }}
+                  >
+                    {isLoading && plan.tier === selectedPlan ? 'Processing...' : plan.buttonText}
+                  </Button>
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
 
-        <div className="text-center mt-6 p-4 bg-muted/50 rounded-lg">
+        <div className="mt-6 text-center space-y-1">
           <p className="text-sm text-muted-foreground">
-            <strong>No commitment:</strong> You can upgrade or downgrade your plan at any time. 
-            All plans include a 30-day money-back guarantee.
+            <strong>No commitment:</strong> You can upgrade or downgrade your plan at any time.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            All paid plans include a 7-day free trial. Cancel anytime.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Secure payment processing by Stripe
           </p>
         </div>
 

@@ -10,7 +10,7 @@ interface AuthContextType {
   session: Session | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
-  signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>
+  signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null; user: User | null }>
   signOut: () => Promise<void>
 }
 
@@ -57,57 +57,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
         options: {
           data: {
-            name,
+            display_name: name,
           },
         },
       })
       
       if (error) {
-        return { error }
+        return { error, user: null }
       }
       
-      // If signup was successful, the database trigger should create the user record
-      // But we'll also try to create it manually as a fallback
+      // Create user record manually (more reliable than database trigger)
       if (data.user) {
         try {
-          // Wait a moment for the trigger to potentially fire
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          
-          // Check if user record exists, if not create it
-          const { data: existingUser, error: fetchError } = await supabase
+          // Always create the user record manually
+          const { error: createError } = await supabase
             .from('users')
-            .select('id')
-            .eq('id', data.user.id)
-            .single()
+            .insert([{
+              id: data.user.id,
+              email: data.user.email,
+              tier: 'free',
+              questionsLeft: 5,
+              questions_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+              has_seen_welcome: false,
+              fullName: name.trim()
+            }])
           
-          if (fetchError && fetchError.code === 'PGRST116') {
-            // User doesn't exist, create them manually
-            const { error: createError } = await supabase
-              .from('users')
-              .insert([{
-                id: data.user.id,
-                tier: 'free',
-                questions_left: 5,
-                questions_reset_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                has_seen_welcome: false,
-                full_name: name.trim()
-              }])
-            
-            if (createError) {
-              console.error('Error creating user record:', createError)
-              // Don't fail the signup if user record creation fails
-            }
+          if (createError) {
+            console.error('Error creating user record:', createError)
+            // Don't fail the signup if user record creation fails
+          } else {
+            console.log('User record created successfully')
           }
         } catch (userCreationError) {
-          console.error('Error in user creation fallback:', userCreationError)
+          console.error('Error in user creation:', userCreationError)
           // Don't fail the signup if user record creation fails
         }
       }
       
-      return { error: null }
+      return { error: null, user: data.user }
     } catch (error) {
       console.error('Signup error:', error)
-      return { error: error as Error }
+      return { error: error as Error, user: null }
     }
   }
 

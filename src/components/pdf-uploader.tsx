@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FileText, Upload, X, Loader2, CheckCircle, AlertCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { ExtractedQuestion, PDFMetadata } from "@/types/exam-types"
+import { supabase } from "@/lib/supabase"
 
 interface PDFUploaderProps {
   onQuestionsExtracted: (questions: ExtractedQuestion[], fullText: string, metadata?: PDFMetadata) => void
@@ -64,9 +65,15 @@ export function PDFUploader({ onQuestionsExtracted, onError, onPaperSaved, showS
         formData.append('paperId', savedPaperId)
       }
       
+      // Get current session for authentication
+      const { data: { session } } = await supabase.auth.getSession()
+      
       // Send PDF to server for FULL text extraction using pdf-parse
       const response = await fetch('/api/process-pdf', {
         method: 'POST',
+        headers: {
+          ...(session?.access_token && { 'Authorization': `Bearer ${session.access_token}` })
+        },
         body: formData,
       })
       

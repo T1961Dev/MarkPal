@@ -76,6 +76,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check user authentication and Pro+ plan for uploaded questions
+    if (is_from_paper) {
+      const supabase = createAdminSupabaseClient();
+      const authHeader = request.headers.get('authorization');
+      
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
+      }
+      
+      const token = authHeader.split(' ')[1];
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      
+      if (authError || !user) {
+        return NextResponse.json({ success: false, error: "Invalid authentication" }, { status: 401 });
+      }
+      
+      // Get user's plan tier
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('tier')
+        .eq('id', user.id)
+        .single();
+      
+      if (userError || !userData) {
+        return NextResponse.json({ success: false, error: "User data not found" }, { status: 404 });
+      }
+      
+      // Check if user has Pro+ plan for uploaded questions
+      if (userData.tier !== 'pro+') {
+        return NextResponse.json({ 
+          success: false, 
+          error: "Pro+ plan required for uploading questions from exam papers. Please upgrade your plan to access this feature." 
+        }, { status: 403 });
+      }
+    }
+
     const supabase = createAdminSupabaseClient();
 
     const { data, error } = await supabase

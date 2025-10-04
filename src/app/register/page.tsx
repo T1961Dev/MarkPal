@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/auth-context"
-import { Loader2, Mail, Lock, User, CheckCircle } from "lucide-react"
+import { useDeviceRegistration } from "@/hooks/use-device-registration"
+import { Loader2, Mail, Lock, User, CheckCircle, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 
 export default function RegisterPage() {
@@ -19,6 +20,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("")
   const { user, signUp } = useAuth()
   const router = useRouter()
+  const { isLoading: deviceCheckLoading, hasExistingAccount, registrationDate, registerDevice } = useDeviceRegistration()
 
   useEffect(() => {
     if (user) {
@@ -28,15 +30,31 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Check if device already has an account
+    if (hasExistingAccount) {
+      setError("This device already has a registered account. Each device can only have one account.")
+      toast.error("Device registration limit reached")
+      return
+    }
+    
     setLoading(true)
     setError("")
 
     try {
-      const { error } = await signUp(email, password, name)
+      const { error, user: newUser } = await signUp(email, password, name)
       if (error) {
         setError(error.message)
         toast.error("Registration failed. Please try again.")
       } else {
+        // Register the device after successful signup
+        if (newUser) {
+          const deviceRegistered = await registerDevice(newUser.id)
+          if (!deviceRegistered) {
+            console.warn('Failed to register device, but user account was created')
+          }
+        }
+        
         toast.success("Account created successfully! Check your email to verify your account.")
         router.push("/login")
       }
@@ -81,6 +99,34 @@ export default function RegisterPage() {
             </div>
           </CardHeader>
           <CardContent>
+            {/* Device Registration Warning */}
+            {deviceCheckLoading ? (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
+                <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+                <p className="text-sm text-blue-800">Checking device registration status...</p>
+              </div>
+            ) : hasExistingAccount ? (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-3 mb-2">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  <h3 className="text-sm font-medium text-red-800">Device Already Registered</h3>
+                </div>
+                <p className="text-sm text-red-700 mb-3">
+                  This device already has a registered account. Each device can only have one account to prevent spam.
+                </p>
+                {registrationDate && (
+                  <p className="text-xs text-red-600">
+                    Account created on: {new Date(registrationDate).toLocaleDateString()}
+                  </p>
+                )}
+                <div className="mt-3 pt-3 border-t border-red-200">
+                  <Link href="/login" className="text-sm text-red-600 hover:text-red-800 underline">
+                    Already have an account? Sign in instead
+                  </Link>
+                </div>
+              </div>
+            ) : null}
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-base font-medium">
@@ -146,7 +192,7 @@ export default function RegisterPage() {
               <Button 
                 type="submit" 
                 className="w-full h-12 text-base bg-primary hover:bg-primary/90 text-primary-foreground"
-                disabled={loading}
+                disabled={loading || hasExistingAccount}
               >
                 {loading ? (
                   <>
