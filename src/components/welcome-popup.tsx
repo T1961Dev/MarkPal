@@ -217,7 +217,9 @@ export function WelcomePopup({ isOpen, onClose, onUpgrade }: WelcomePopupProps) 
                         handleContinueFree()
                       } else {
                         setSelectedPlan(plan.tier)
-                        handleUpgrade(plan.tier)
+                        if (plan.tier !== 'free') {
+                          handleUpgrade(plan.tier)
+                        }
                       }
                     }}
                   >
