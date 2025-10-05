@@ -18,11 +18,10 @@ import {
   Trash2,
   ArrowRight,
   Clock,
-  Layers
+  TrendingUp
 } from "lucide-react"
 import Link from "next/link"
 import { useSearchParams, useRouter } from "next/navigation"
-import { SavedQuestionVersionsDialog } from "@/components/saved-question-versions-dialog"
 
 interface SavedQuestion {
   id: string
@@ -60,9 +59,6 @@ function SavedQuestionsContent() {
   const [savedQuestions, setSavedQuestions] = useState<SavedQuestion[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [versionsDialogOpen, setVersionsDialogOpen] = useState(false)
-  const [selectedQuestionVersions, setSelectedQuestionVersions] = useState<SavedQuestion[]>([])
-  const [selectedQuestionName, setSelectedQuestionName] = useState("")
 
   useEffect(() => {
     if (user) {
@@ -106,30 +102,6 @@ function SavedQuestionsContent() {
   }
 
 
-  const handleViewVersions = (questionKey: string, questionName: string) => {
-    const versions = groupedQuestions[questionKey] || []
-    setSelectedQuestionVersions(versions)
-    setSelectedQuestionName(questionName)
-    setVersionsDialogOpen(true)
-  }
-
-  const handleCloseVersionsDialog = () => {
-    setVersionsDialogOpen(false)
-    setSelectedQuestionVersions([])
-    setSelectedQuestionName("")
-  }
-
-  const handleImproveVersion = (version: SavedQuestion) => {
-    if (version.question_id) {
-      // Navigate to question bank with the specific question and attempt
-      window.open(`/question-bank/${version.question_id}?attempt=${version.attempt_id}`, '_blank')
-    }
-  }
-
-  const handleStartFresh = (questionId: string) => {
-    // Navigate to question bank with fresh start
-    window.open(`/question-bank/${questionId}?fresh=true`, '_blank')
-  }
 
   const filteredQuestions = savedQuestions.filter(question =>
     question.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -252,20 +224,6 @@ function SavedQuestionsContent() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
-                        {hasMultipleVersions && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleViewVersions(key, latestQuestion.name)
-                            }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="View all versions"
-                          >
-                            <Layers className="h-4 w-4" />
-                          </Button>
-                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -319,6 +277,7 @@ function SavedQuestionsContent() {
                         className="h-2"
                       />
                     </div>
+                    
                     
                     <div className="flex items-center justify-between mt-4 pt-4 border-t">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -411,15 +370,6 @@ function SavedQuestionsContent() {
         )}
 
 
-        {/* Versions Dialog */}
-        <SavedQuestionVersionsDialog
-          isOpen={versionsDialogOpen}
-          onClose={handleCloseVersionsDialog}
-          questionName={selectedQuestionName}
-          versions={selectedQuestionVersions}
-          onImproveVersion={handleImproveVersion}
-          onStartFresh={handleStartFresh}
-        />
       </div>
     </DashboardLayout>
   )

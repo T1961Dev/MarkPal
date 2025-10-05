@@ -9,13 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { 
   Calendar, 
   Award, 
-  Eye, 
   Edit3, 
   RotateCcw,
-  X,
   Clock
 } from "lucide-react"
-import { SavedQuestionDialog } from "@/components/saved-question-dialog"
 
 interface SavedQuestion {
   id: string
@@ -63,8 +60,6 @@ export function SavedQuestionVersionsDialog({
   onImproveVersion,
   onStartFresh
 }: SavedQuestionVersionsDialogProps) {
-  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null)
-  const [viewDialogOpen, setViewDialogOpen] = useState(false)
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
@@ -90,15 +85,6 @@ export function SavedQuestionVersionsDialog({
     return "destructive"
   }
 
-  const handleViewVersion = (versionId: string) => {
-    setSelectedVersionId(versionId)
-    setViewDialogOpen(true)
-  }
-
-  const handleCloseViewDialog = () => {
-    setViewDialogOpen(false)
-    setSelectedVersionId(null)
-  }
 
   const handleImprove = (version: SavedQuestion) => {
     onImproveVersion(version)
@@ -115,16 +101,11 @@ export function SavedQuestionVersionsDialog({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-xl font-semibold">
-                {questionName} - All Versions
-              </DialogTitle>
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <DialogTitle className="text-2xl font-semibold">
+              {questionName} - All Versions
+            </DialogTitle>
             <p className="text-sm text-muted-foreground">
               {versions.length} version{versions.length !== 1 ? 's' : ''} • Click to view or improve
             </p>
@@ -132,23 +113,23 @@ export function SavedQuestionVersionsDialog({
 
           <div className="space-y-4">
             {/* Action Buttons */}
-            <div className="flex gap-3 p-4 bg-muted/50 rounded-lg">
-              <Button onClick={handleStartFresh} className="flex-1">
+            <div className="flex flex-col sm:flex-row gap-3 p-4 bg-muted/50 rounded-lg">
+              <Button onClick={handleStartFresh} className="w-full sm:w-auto">
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Start Fresh Attempt
               </Button>
-              <div className="text-sm text-muted-foreground flex items-center">
+              <div className="text-sm text-muted-foreground flex items-center justify-center sm:justify-start">
                 <Clock className="h-4 w-4 mr-1" />
                 Latest: {formatDate(versions[0]?.created_at || '')}
               </div>
             </div>
 
             {/* Versions Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {versions.map((version, index) => (
                 <Card 
                   key={version.id} 
-                  className={`cursor-pointer hover:shadow-md transition-all duration-200 ${
+                  className={`cursor-pointer hover:shadow-md transition-shadow duration-150 ${
                     index === 0 ? 'ring-2 ring-primary/20 bg-primary/5' : ''
                   }`}
                 >
@@ -190,10 +171,6 @@ export function SavedQuestionVersionsDialog({
                   </CardHeader>
                   
                   <CardContent className="pt-0">
-                    <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                      {version.question}
-                    </p>
-                    
                     <div className="space-y-3">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Score</span>
@@ -217,21 +194,12 @@ export function SavedQuestionVersionsDialog({
                     {/* Action Buttons */}
                     <div className="flex gap-2 mt-4">
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewVersion(version.id)}
-                        className="flex-1"
-                      >
-                        <Eye className="h-3 w-3 mr-1" />
-                        View
-                      </Button>
-                      <Button
                         size="sm"
                         onClick={() => handleImprove(version)}
-                        className="flex-1"
+                        className="w-full"
                       >
                         <Edit3 className="h-3 w-3 mr-1" />
-                        Improve
+                        Improve This Version
                       </Button>
                     </div>
                   </CardContent>
@@ -242,12 +210,6 @@ export function SavedQuestionVersionsDialog({
         </DialogContent>
       </Dialog>
 
-      {/* View Version Dialog */}
-      <SavedQuestionDialog
-        isOpen={viewDialogOpen}
-        onClose={handleCloseViewDialog}
-        questionId={selectedVersionId}
-      />
     </>
   )
 }

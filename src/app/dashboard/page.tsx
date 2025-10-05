@@ -18,7 +18,7 @@ import {
   Calendar
 } from "lucide-react"
 import Link from "next/link"
-import { getUser, User, getUserStats, checkAndResetUserQuestions, markWelcomeSeen } from "@/lib/supabase"
+import { getUser, User, getUserStats, checkAndResetUserQuestions, markWelcomeSeen, getOptimisticUserData } from "@/lib/supabase"
 import { PricingPopup } from "@/components/pricing-popup"
 import { WelcomePopup } from "@/components/welcome-popup"
 import { dataSync } from "@/lib/data-sync"
@@ -42,9 +42,23 @@ export default function Dashboard() {
     
     try {
       setLoading(true)
-      // First check and reset questions if needed (this happens in getUser, but let's be explicit)
-      await checkAndResetUserQuestions(user.id, session.access_token)
       
+      // Use cached data first for instant loading
+      const cachedData = getOptimisticUserData(user.id)
+      if (cachedData) {
+        setUserData(cachedData)
+        // Load stats in background
+        getUserStats(user.id, session.access_token, timePeriod).then(setUserStats)
+        
+        // Check welcome popup
+        if (cachedData.has_seen_welcome === false) {
+          setWelcomePopupOpen(true)
+        }
+        setLoading(false)
+        return
+      }
+      
+      // Only fetch from database if no cached data
       const [data, stats] = await Promise.all([
         getUser(user.id, session.access_token),
         getUserStats(user.id, session.access_token, timePeriod)

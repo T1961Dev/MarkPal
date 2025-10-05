@@ -8,7 +8,6 @@ export const metadata: Metadata = {
   title: "Mark Pal",
   description: "Get instant AI feedback on your GCSE and A-Level answers with mark scheme analysis",
   manifest: "/manifest.json",
-  themeColor: "#3b82f6",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -25,6 +24,7 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
+  themeColor: "#3b82f6",
 };
 
 const inter = Inter({
@@ -46,23 +46,6 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="apple-touch-icon" href="/pics/logo.png" />
         <link rel="icon" type="image/png" href="/pics/logo.png" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js')
-                    .then(function(registration) {
-                      console.log('SW registered: ', registration);
-                    })
-                    .catch(function(registrationError) {
-                      console.log('SW registration failed: ', registrationError);
-                    });
-                });
-              }
-            `,
-          }}
-        />
       </head>
       <body
         className={`${inter.variable} font-sans antialiased`}

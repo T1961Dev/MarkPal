@@ -8,9 +8,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface QuestionsProgressProps {
   userData: User | null
+  isLoading?: boolean
 }
 
-export function QuestionsProgress({ userData }: QuestionsProgressProps) {
+export function QuestionsProgress({ userData, isLoading = false }: QuestionsProgressProps) {
   const { user } = useAuth()
   const [localUserData, setLocalUserData] = useState<User | null>(userData)
 
@@ -40,7 +41,7 @@ export function QuestionsProgress({ userData }: QuestionsProgressProps) {
     return null
   }
 
-  if (!localUserData) {
+  if (!localUserData || isLoading) {
     return (
       <div className="flex items-center gap-2 min-w-[120px]">
         <div className="h-2 w-16 bg-muted rounded animate-pulse"></div>

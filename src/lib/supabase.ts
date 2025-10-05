@@ -20,22 +20,25 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 })
 
-// Server-side Supabase client for API routes
+// Server-side Supabase client for API routes - reuse existing client when possible
 export const createServerSupabaseClient = (accessToken?: string) => {
-  if (accessToken) {
-    return createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      },
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false
-      }
-    })
+  // If no access token, use the existing client
+  if (!accessToken) {
+    return supabase
   }
-  return supabase
+  
+  // Only create new client if we have an access token
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    }
+  })
 }
 
 // Admin Supabase client for server-side operations
@@ -116,6 +119,11 @@ export const saveQuestion = async (questionData: Omit<SavedQuestion, 'id' | 'cre
 
   if (error) throw error
   
+  // Invalidate saved questions cache for this user
+  if (questionData.user_id) {
+    savedQuestionsCache.delete(questionData.user_id)
+  }
+  
   // Update streak after saving question
   if (accessToken) {
     try {
@@ -129,7 +137,17 @@ export const saveQuestion = async (questionData: Omit<SavedQuestion, 'id' | 'cre
   return data
 }
 
+// Cache for saved questions
+const savedQuestionsCache = new Map<string, { data: any[], timestamp: number }>()
+const SAVED_QUESTIONS_CACHE_DURATION = 30000 // 30 seconds
+
 export const getSavedQuestions = async (userId: string) => {
+  // Check cache first
+  const cached = savedQuestionsCache.get(userId)
+  if (cached && Date.now() - cached.timestamp < SAVED_QUESTIONS_CACHE_DURATION) {
+    return cached.data
+  }
+
   const { data, error } = await supabase
     .from('saved_questions')
     .select('*')
@@ -137,6 +155,9 @@ export const getSavedQuestions = async (userId: string) => {
     .order('created_at', { ascending: false })
 
   if (error) throw error
+  
+  // Cache the result
+  savedQuestionsCache.set(userId, { data, timestamp: Date.now() })
   return data
 }
 
@@ -148,6 +169,10 @@ export const deleteSavedQuestion = async (questionId: string, userId: string) =>
     .eq('user_id', userId)
 
   if (error) throw error
+  
+  // Invalidate caches
+  savedQuestionsCache.delete(userId)
+  savedQuestionCache.delete(`${userId}-${questionId}`)
 }
 
 // Question Attempt functions
@@ -232,7 +257,19 @@ export const getLatestAttemptForQuestion = async (userId: string, questionId: st
   return data
 }
 
+// Cache for individual saved questions
+const savedQuestionCache = new Map<string, { data: SavedQuestion, timestamp: number }>()
+const SAVED_QUESTION_CACHE_DURATION = 30000 // 30 seconds
+
 export const getSavedQuestionById = async (questionId: string, userId: string): Promise<SavedQuestion | null> => {
+  const cacheKey = `${userId}-${questionId}`
+  
+  // Check cache first
+  const cached = savedQuestionCache.get(cacheKey)
+  if (cached && Date.now() - cached.timestamp < SAVED_QUESTION_CACHE_DURATION) {
+    return cached.data
+  }
+
   const { data, error } = await supabase
     .from('saved_questions')
     .select('*')
@@ -241,6 +278,11 @@ export const getSavedQuestionById = async (questionId: string, userId: string): 
     .single()
 
   if (error) throw error
+  
+  // Cache the result
+  if (data) {
+    savedQuestionCache.set(cacheKey, { data, timestamp: Date.now() })
+  }
   return data
 }
 
@@ -262,7 +304,80 @@ export interface User {
   has_seen_welcome?: boolean
 }
 
+// Simple cache to avoid repeated queries
+const userCache = new Map<string, { data: User; timestamp: number }>()
+const CACHE_DURATION = 30000 // 30 seconds
+
+// localStorage cache for instant data
+const STORAGE_KEY = 'markpal_user_data'
+const STORAGE_DURATION = 5 * 60 * 1000 // 5 minutes
+
+// Get user data from localStorage for instant loading
+export const getUserFromStorage = (userId: string): User | null => {
+  try {
+    const stored = localStorage.getItem(`${STORAGE_KEY}_${userId}`)
+    if (!stored) return null
+    
+    const { data, timestamp } = JSON.parse(stored)
+    if (Date.now() - timestamp > STORAGE_DURATION) {
+      localStorage.removeItem(`${STORAGE_KEY}_${userId}`)
+      return null
+    }
+    
+    return data
+  } catch (error) {
+    console.error('Error reading from localStorage:', error)
+    return null
+  }
+}
+
+// Save user data to localStorage
+export const saveUserToStorage = (userId: string, data: User) => {
+  try {
+    const storageData = {
+      data,
+      timestamp: Date.now()
+    }
+    localStorage.setItem(`${STORAGE_KEY}_${userId}`, JSON.stringify(storageData))
+  } catch (error) {
+    console.error('Error saving to localStorage:', error)
+  }
+}
+
+// Cache invalidation function
+export const invalidateUserCache = (userId: string) => {
+  userCache.delete(userId)
+  // Also clear localStorage
+  localStorage.removeItem(`${STORAGE_KEY}_${userId}`)
+}
+
+// Clear all cache
+export const clearUserCache = () => {
+  userCache.clear()
+  // Clear all localStorage entries
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith(STORAGE_KEY)) {
+      localStorage.removeItem(key)
+    }
+  })
+}
+
 export const getUser = async (userId: string, accessToken?: string): Promise<User | null> => {
+  // 1. Check localStorage first (instant)
+  const storedData = getUserFromStorage(userId)
+  if (storedData) {
+    // Update in-memory cache with stored data
+    userCache.set(userId, { data: storedData, timestamp: Date.now() })
+    return storedData
+  }
+  
+  // 2. Check in-memory cache
+  const cached = userCache.get(userId)
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data
+  }
+  
+  // Only create client if we need to make a database call
   const client = accessToken ? createServerSupabaseClient(accessToken) : supabase
   
   try {
@@ -275,30 +390,34 @@ export const getUser = async (userId: string, accessToken?: string): Promise<Use
     if (error) {
       if (error.code === 'PGRST116') {
         // User doesn't exist, create them
-        // Try to get the name from auth user metadata if available
-        let fullName = ''
-        try {
-          const { data: authUser } = await supabase.auth.getUser()
-          if (authUser.user?.user_metadata?.name) {
-            fullName = authUser.user.user_metadata.name
-          }
-          const email = authUser.user?.email || ''
-          return createUser(userId, accessToken, fullName, email)
-        } catch (metadataError) {
-          console.log('Could not fetch auth user metadata:', metadataError)
-          return createUser(userId, accessToken, fullName, '')
-        }
+        const newUser = await createUser(userId, accessToken)
+        userCache.set(userId, { data: newUser, timestamp: Date.now() })
+        saveUserToStorage(userId, newUser)
+        return newUser
       }
       console.error('Error fetching user:', error)
       throw error
     }
     
-    // Check and reset questions if needed
-    return await checkAndResetUserQuestions(userId, accessToken)
+    // Check and reset questions if needed (optimized)
+    const updatedUser = await checkAndResetUserQuestionsOptimized(data, client)
+    userCache.set(userId, { data: updatedUser, timestamp: Date.now() })
+    saveUserToStorage(userId, updatedUser)
+    return updatedUser
   } catch (error) {
     console.error('Error in getUser:', error)
     throw error
   }
+}
+
+// Optimistic user data for instant UI updates
+export const getOptimisticUserData = (userId: string): User | null => {
+  // Check in-memory cache first
+  const cached = userCache.get(userId)
+  if (cached) return cached.data
+  
+  // Fallback to localStorage for instant data
+  return getUserFromStorage(userId)
 }
 
 export const createUser = async (userId: string, accessToken?: string, fullName?: string, email?: string): Promise<User> => {
@@ -629,7 +748,7 @@ export const getUserStats = async (userId: string, accessToken?: string, timePer
     // Calculate consecutive days from today backwards
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    for (let i = 0; i < 365; i++) { // Check up to a year back
+    for (let i = 0; i < 30; i++) { // Check up to 30 days back (optimized)
       const checkDate = new Date(today)
       checkDate.setDate(today.getDate() - i)
       const dateStr = checkDate.toISOString().split('T')[0]
@@ -715,20 +834,8 @@ export const markWelcomeSeen = async (userId: string, accessToken?: string) => {
   }
 }
 
-// Check and reset user questions if needed
-export const checkAndResetUserQuestions = async (userId: string, accessToken?: string): Promise<User | null> => {
-  const client = accessToken ? createServerSupabaseClient(accessToken) : supabase
-  
-  // Get user data
-  const { data: user, error } = await client
-    .from('users')
-    .select('*')
-    .eq('id', userId)
-    .single()
-
-  if (error) throw error
-  if (!user) return null
-
+// Optimized version - takes user data directly to avoid extra query
+export const checkAndResetUserQuestionsOptimized = async (user: User, client: any): Promise<User> => {
   // Check if reset date has passed (only if questions_reset_date exists)
   if (user.questions_reset_date) {
     const resetDate = new Date(user.questions_reset_date)
@@ -746,7 +853,7 @@ export const checkAndResetUserQuestions = async (userId: string, accessToken?: s
           questionsLeft: getQuestionLimit(user.tier),
           questions_reset_date: newResetDate.toISOString().split('T')[0]
         })
-        .eq('id', userId)
+        .eq('id', user.id)
         .select()
         .single()
 
@@ -764,7 +871,7 @@ export const checkAndResetUserQuestions = async (userId: string, accessToken?: s
         questionsLeft: getQuestionLimit(user.tier),
         questions_reset_date: newResetDate.toISOString().split('T')[0]
       })
-      .eq('id', userId)
+      .eq('id', user.id)
       .select()
       .single()
 
@@ -773,6 +880,23 @@ export const checkAndResetUserQuestions = async (userId: string, accessToken?: s
   }
 
   return user
+}
+
+// Keep original function for backward compatibility
+export const checkAndResetUserQuestions = async (userId: string, accessToken?: string): Promise<User | null> => {
+  const client = accessToken ? createServerSupabaseClient(accessToken) : supabase
+  
+  // Get user data
+  const { data: user, error } = await client
+    .from('users')
+    .select('*')
+    .eq('id', userId)
+    .single()
+
+  if (error) throw error
+  if (!user) return null
+
+  return await checkAndResetUserQuestionsOptimized(user, client)
 }
 
 // Reset monthly questions for all users (admin function)

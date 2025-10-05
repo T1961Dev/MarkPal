@@ -19,10 +19,12 @@ import {
   ArrowLeft,
   FileText,
   Award,
-  Clock
+  Clock,
+  TrendingUp
 } from "lucide-react"
-import { SavedQuestion, getSavedQuestionById } from "@/lib/supabase"
+import { SavedQuestion, getSavedQuestionById, getSavedQuestions } from "@/lib/supabase"
 import { AnswerHighlighter } from "@/components/answer-highlighter"
+import { ProgressGraph } from "@/components/progress-graph"
 
 export default function SavedQuestionPage() {
   const { user } = useAuth()
@@ -30,6 +32,7 @@ export default function SavedQuestionPage() {
   const router = useRouter()
   const [question, setQuestion] = useState<SavedQuestion | null>(null)
   const [loading, setLoading] = useState(true)
+  const [progressVersions, setProgressVersions] = useState<SavedQuestion[]>([])
 
   useEffect(() => {
     if (user && params.id) {
@@ -42,9 +45,21 @@ export default function SavedQuestionPage() {
     
     setLoading(true)
     try {
-      const questionData = await getSavedQuestionById(params.id as string, user.id)
+      // Load both question and all questions in parallel for faster loading
+      const [questionData, allQuestions] = await Promise.all([
+        getSavedQuestionById(params.id as string, user.id),
+        getSavedQuestions(user.id)
+      ])
+      
       if (questionData) {
         setQuestion(questionData)
+        
+        // Filter versions for progress graph
+        const versions = allQuestions.filter(q => 
+          q.question_id === questionData.question_id || 
+          (q.question_id === null && q.name === questionData.name)
+        )
+        setProgressVersions(versions)
       } else {
         // Question not found, redirect back
         router.push('/dashboard/saved-questions')
@@ -56,6 +71,11 @@ export default function SavedQuestionPage() {
       setLoading(false)
     }
   }
+
+  const handleViewVersions = () => {
+    router.push(`/dashboard/saved-questions/${params.id}/versions`)
+  }
+
 
 
   const getScoreColor = (score: number, maxScore: number) => {
@@ -121,6 +141,13 @@ export default function SavedQuestionPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleViewVersions}
+            >
+              <Award className="h-4 w-4 mr-2" />
+              View All Versions
+            </Button>
             <Badge variant="outline" className="flex items-center gap-1">
               <Award className="h-3 w-3" />
               {question.score}/{question.max_score} marks
@@ -154,6 +181,24 @@ export default function SavedQuestionPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Progress Graph - Show only if multiple versions exist */}
+        {progressVersions.length > 1 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Progress Over Time
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Your improvement across {progressVersions.length} attempts
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ProgressGraph versions={progressVersions} />
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Question */}
@@ -294,6 +339,7 @@ export default function SavedQuestionPage() {
             </CardContent>
           </Card>
         )}
+
       </div>
     </DashboardLayout>
   )

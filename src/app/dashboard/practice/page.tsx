@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -37,7 +38,7 @@ import { AnswerHighlighter } from "@/components/answer-highlighter"
 import { ProgressButton } from "@/components/progress-button"
 import { toast } from "sonner"
 import { PricingPopup } from "@/components/pricing-popup"
-import { getUser, User as UserType, saveQuestion } from "@/lib/supabase"
+import { getUser, User as UserType, saveQuestion, getOptimisticUserData } from "@/lib/supabase"
 
 interface FeedbackResult {
   score: number
@@ -60,6 +61,7 @@ interface FeedbackResult {
 
 export default function Practice() {
   const { user, session } = useAuth()
+  const searchParams = useSearchParams()
   const [currentSlide, setCurrentSlide] = useState(0)
   const [question, setQuestion] = useState("")
   const [markScheme, setMarkScheme] = useState("")
@@ -88,6 +90,43 @@ export default function Practice() {
       loadUserData()
     }
   }, [user])
+
+  // Handle URL parameters for pre-populating form from saved questions
+  useEffect(() => {
+    const urlQuestion = searchParams.get('question')
+    const urlMarkScheme = searchParams.get('markScheme')
+    const urlMaxScore = searchParams.get('maxScore')
+    const urlStudentAnswer = searchParams.get('studentAnswer')
+    const urlVersionId = searchParams.get('versionId')
+
+    // Only pre-fill if we have URL parameters (coming from improvement mode)
+    if (urlQuestion || urlMarkScheme || urlMaxScore || urlStudentAnswer) {
+      if (urlQuestion) {
+        setQuestion(urlQuestion)
+      }
+      if (urlMarkScheme) {
+        setMarkScheme(urlMarkScheme)
+      }
+      if (urlMaxScore) {
+        setMaxMarks(urlMaxScore)
+      }
+      if (urlStudentAnswer) {
+        setStudentAnswer(urlStudentAnswer)
+      }
+    } else {
+      // Clear form when navigating to practice normally
+      setQuestion("")
+      setMarkScheme("")
+      setStudentAnswer("")
+      setMaxMarks("")
+      setQuestionImage("")
+      setStudentAnswerImage("")
+      setMarkSchemeImage("")
+    }
+  }, [searchParams])
+
+  // Check if we're in improvement mode
+  const isImprovementMode = searchParams.get('versionId') !== null
 
   // Global paste handler for images
   useEffect(() => {
@@ -141,6 +180,16 @@ export default function Practice() {
     
     try {
       setLoading(true)
+      
+      // Use cached data first for instant loading
+      const cachedData = getOptimisticUserData(user.id)
+      if (cachedData) {
+        setUserData(cachedData)
+        setLoading(false)
+        return
+      }
+      
+      // Only fetch from database if no cached data
       const data = await getUser(user.id)
       setUserData(data)
     } catch (error) {
@@ -538,6 +587,27 @@ export default function Practice() {
           ))}
         </div>
 
+        {/* Improvement Mode Indicator */}
+        {isImprovementMode && (
+          <div className="max-w-4xl mx-auto mb-6">
+            <Card className="border-2 border-blue-200 bg-blue-50/50">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-full">
+                    <Sparkles className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-blue-900">Improvement Mode</h3>
+                    <p className="text-sm text-blue-700">
+                      You're improving a previous answer. The form has been pre-filled with your saved question data.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Practice Content */}
         <div className="max-w-4xl mx-auto">
           {currentSlide === 0 && (
@@ -605,6 +675,17 @@ export default function Practice() {
                 <CardDescription>
                   Upload an image of your written answer or type it manually
                 </CardDescription>
+                {isImprovementMode && studentAnswer && (
+                  <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm font-medium text-amber-800">Previous Answer (for reference)</span>
+                    </div>
+                    <p className="text-sm text-amber-700 bg-white p-2 rounded border">
+                      {studentAnswer}
+                    </p>
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Primary: Image Upload */}
@@ -629,14 +710,58 @@ export default function Practice() {
                     <FileText className="h-4 w-4" />
                     <span>Or type your answer manually</span>
                   </div>
-                  <Textarea
-                    placeholder="Type your answer here if you prefer text input..."
-                    value={studentAnswer}
-                    onChange={(e) => setStudentAnswer(e.target.value)}
-                    onKeyDown={(e) => handleKeyPress(e, 1)}
-                    className="min-h-[100px] text-sm"
-                  />
+                  {isLiveMode ? (
+                    <LiveAnswerInput
+                      value={studentAnswer}
+                      onChange={setStudentAnswer}
+                      onKeyDown={(e) => handleKeyPress(e, 1)}
+                      placeholder="Type your answer here for live analysis..."
+                      className="min-h-[100px] text-sm"
+                    />
+                  ) : (
+                    <Textarea
+                      placeholder="Type your answer here if you prefer text input..."
+                      value={studentAnswer}
+                      onChange={(e) => setStudentAnswer(e.target.value)}
+                      onKeyDown={(e) => handleKeyPress(e, 1)}
+                      className="min-h-[100px] text-sm"
+                    />
+                  )}
                 </div>
+
+                {/* Live Analysis Toggle - Pro+ Only */}
+                {userData?.tier === 'pro+' && (
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 rounded-full">
+                        <Brain className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-purple-900">Live Analysis Mode</h4>
+                        <p className="text-sm text-purple-700">
+                          Get real-time feedback as you type (Pro+ feature)
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant={isLiveMode ? "default" : "outline"}
+                      onClick={() => setIsLiveMode(!isLiveMode)}
+                      className="shrink-0"
+                    >
+                      {isLiveMode ? (
+                        <>
+                          <EyeOff className="h-4 w-4 mr-2" />
+                          Disable Live Mode
+                        </>
+                      ) : (
+                        <>
+                          <Brain className="h-4 w-4 mr-2" />
+                          Enable Live Mode
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-center gap-4">
                   <Label htmlFor="maxMarks" className="text-lg font-medium">

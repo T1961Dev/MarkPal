@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -38,13 +38,14 @@ import {
   Menu,
   Upload,
   Crown,
+  Loader2,
 } from "lucide-react"
 import { ProfileDropdown } from "./profile-dropdown"
 import { ProfileSettingsDialog } from "./profile-settings-dialog"
 import { QuestionsProgress } from "./questions-progress"
 import { PricingPopup } from "./pricing-popup"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { getUser, User as UserType, checkAndResetUserQuestions } from "@/lib/supabase"
+import { getUser, User as UserType, checkAndResetUserQuestions, invalidateUserCache, getOptimisticUserData, getUserFromStorage } from "@/lib/supabase"
 import { useEffect, useCallback } from "react"
 import { dataSync } from "@/lib/data-sync"
 
@@ -81,23 +82,46 @@ const navigationItems: NavigationItem[] = [
   },
 ]
 
-const secondaryItems = [
-  {
-    title: "Help & Support",
-    url: "/dashboard/help",
-    icon: HelpCircle,
-  },
-  {
-    title: "Settings",
-    url: "/dashboard/settings",
-    icon: Settings,
-  },
-]
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, session, signOut } = useAuth()
   const pathname = usePathname()
+  const router = useRouter()
   const [userData, setUserData] = useState<UserType | null>(null)
+  const [isLoadingUserData, setIsLoadingUserData] = useState(true)
+
+  // Initialize with optimistic data for instant UI
+  useEffect(() => {
+    if (user && !userData) {
+      // Try localStorage first for instant data
+      const storedData = getUserFromStorage(user.id)
+      if (storedData) {
+        setUserData(storedData)
+        setIsLoadingUserData(false) // Stop loading immediately
+        return
+      }
+      
+      // Fallback to in-memory cache
+      const optimisticData = getOptimisticUserData(user.id)
+      if (optimisticData) {
+        setUserData(optimisticData)
+        setIsLoadingUserData(false) // Stop loading immediately if we have cached data
+      }
+    }
+  }, [user, userData])
+
+  // Prefetch routes for instant navigation
+  useEffect(() => {
+    const prefetchRoutes = () => {
+      navigationItems.forEach(item => {
+        router.prefetch(item.url)
+      })
+    }
+    
+    // Prefetch after a short delay to not block initial render
+    const timeoutId = setTimeout(prefetchRoutes, 100)
+    return () => clearTimeout(timeoutId)
+  }, [router])
   const [profileDialogOpen, setProfileDialogOpen] = useState(false)
   const [pricingPopupOpen, setPricingPopupOpen] = useState(false)
 
@@ -112,6 +136,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       setUserData(data)
     } catch (error) {
       console.error('Error loading user data:', error)
+    } finally {
+      setIsLoadingUserData(false)
     }
   }, [user, session])
 
@@ -125,6 +151,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   useEffect(() => {
     const handleQuestionsUsed = () => {
       if (user && session) {
+        // Invalidate cache and reload data
+        invalidateUserCache(user.id)
         loadUserData()
       }
     }
@@ -178,7 +206,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
           <SidebarContent className="px-3">
             <SidebarGroup>
-              <SidebarGroupLabel>Navigation</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {navigationItems.map((item) => {
@@ -202,134 +229,98 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                               </SidebarMenuButton>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Coming Soon - This feature will be available soon!</p>
+                              <p>Coming Soon</p>
                             </TooltipContent>
                           </Tooltip>
                         </SidebarMenuItem>
                       )
                     }
 
-                    // Special handling for Upload Question - Pro+ restriction
-                    if (item.title === "Upload Question") {
-                      const isProPlus = userData?.tier === 'pro+'
-                      return (
-                        <SidebarMenuItem key={item.title}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <SidebarMenuButton
-                                className={`w-full justify-start ${!isProPlus ? 'text-muted-foreground cursor-not-allowed' : ''}`}
-                                onClick={(e) => {
-                                  if (!isProPlus) {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    setPricingPopupOpen(true)
-                                  }
-                                }}
-                                asChild={isProPlus}
-                              >
-                                {isProPlus ? (
-                                  <Link href={item.url}>
-                                    <div className="flex items-center gap-2">
-                                      <item.icon className="h-4 w-4" />
-                                      <span>{item.title}</span>
-                                    </div>
-                                  </Link>
-                                ) : (
-                                  <div className="flex items-center gap-2">
-                                    <item.icon className="h-4 w-4" />
-                                    <span>{item.title}</span>
-                                    <Crown className="h-4 w-4 text-blue-600" />
-                                  </div>
-                                )}
-                              </SidebarMenuButton>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{isProPlus ? 'Practice with AI feedback' : 'Pro+ plan required for practice sessions'}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </SidebarMenuItem>
-                      )
-                    }
 
                     // Regular navigation items
+                    const isActive = pathname === item.url
+                    
                     return (
-                      <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={pathname === item.url}
-                          className="w-full justify-start"
-                        >
-                          <Link href={item.url}>
-                            <div className="flex items-center gap-2">
-                              <item.icon className="h-4 w-4" />
-                              <span>{item.title}</span>
-                            </div>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                        <SidebarMenuItem key={item.title} className={isActive ? 'bg-accent rounded-md' : ''}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive}
+                            className="w-full justify-start"
+                          >
+                            <Link href={item.url}>
+                              <div className="flex items-center gap-2">
+                                <item.icon className="h-4 w-4" />
+                                <span className={isActive ? 'text-primary font-medium' : ''}>{item.title}</span>
+                              </div>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
                     )
                   })}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
 
-            <Separator className="my-4" />
-
-            <SidebarGroup>
-              <SidebarGroupLabel>Account</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {secondaryItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={pathname === item.url}
-                        className="w-full justify-start"
-                      >
-                        <Link href={item.url}>
-                          <item.icon className="h-4 w-4" />
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
           </SidebarContent>
 
           <SidebarFooter className="p-4">
             <div className="space-y-3">
               {/* Questions Progress */}
               <div className="px-3">
-                <QuestionsProgress userData={userData} />
+                <QuestionsProgress userData={userData} isLoading={isLoadingUserData} />
               </div>
 
               {/* User Profile */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={userData?.avatar_url} />
-                  <AvatarFallback>
-                    {user?.email?.charAt(0).toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {userData?.fullName || user?.email?.split('@')[0] || "User"}
-                  </p>
-                  <Badge variant="secondary" className="text-xs">
-                    {userData?.tier ? userData.tier.charAt(0).toUpperCase() + userData.tier.slice(1) : 'Free'} Plan
-                  </Badge>
+              {isLoadingUserData ? (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <div className="h-8 w-8 bg-muted rounded-full animate-pulse"></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="h-4 w-24 bg-muted rounded animate-pulse mb-2"></div>
+                    <div className="h-3 w-16 bg-muted rounded animate-pulse"></div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="h-8 w-8 bg-muted rounded animate-pulse"></div>
+                    <div className="h-8 w-8 bg-muted rounded animate-pulse"></div>
+                  </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                  onClick={() => signOut()}
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
+              ) : (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={userData?.avatar_url} />
+                    <AvatarFallback>
+                      {user?.email?.charAt(0).toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {userData?.fullName || user?.email?.split('@')[0] || "User"}
+                    </p>
+                    <Badge variant="secondary" className="text-xs">
+                      {userData?.tier ? userData.tier.charAt(0).toUpperCase() + userData.tier.slice(1) : 'Free'} Plan
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                      asChild
+                    >
+                      <Link href="/dashboard/settings">
+                        <Settings className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                      onClick={() => signOut()}
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </SidebarFooter>
         </Sidebar>
@@ -361,7 +352,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 >
                   <Target className="h-4 w-4 mr-2" />
                   Quick Practice
-                  <Crown className="h-4 w-4 ml-2 text-blue-600" />
                 </Button>
               )}
             </div>
@@ -369,7 +359,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Main Content */}
           <main className="flex-1 overflow-auto p-6">
-            {children}
+            {isLoadingUserData ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Loading dashboard...</p>
+                </div>
+              </div>
+            ) : (
+              children
+            )}
           </main>
         </div>
       </div>
