@@ -18,6 +18,8 @@ interface LiveAnswerInputProps {
   onMaxMarksChange: (value: string) => void
   onKeyDown?: (e: React.KeyboardEvent) => void
   autoFocus?: boolean
+  placeholder?: string
+  className?: string
 }
 
 interface MarkSchemeLevel {
@@ -44,7 +46,9 @@ export function LiveAnswerInput({
   maxMarks, 
   onMaxMarksChange,
   onKeyDown, 
-  autoFocus 
+  autoFocus,
+  placeholder = "Start typing your answer... I'll highlight content that matches the mark scheme!",
+  className
 }: LiveAnswerInputProps) {
   const [highlights, setHighlights] = useState<TextHighlight[]>([])
   const [markSchemeLevels, setMarkSchemeLevels] = useState<MarkSchemeLevel[]>([])
@@ -282,11 +286,11 @@ export function LiveAnswerInput({
           <div className="relative">
             <Textarea
               ref={textareaRef}
-              placeholder="Start typing your answer... I'll highlight content that matches the mark scheme!"
+              placeholder={placeholder}
               value={value}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={onKeyDown}
-              className="min-h-[200px] text-lg rounded-2xl border-2 border-blue-100 focus:border-accent transition-all duration-300 focus:shadow-lg"
+              className={`min-h-[200px] text-lg rounded-2xl border-2 border-blue-100 focus:border-accent transition-all duration-300 focus:shadow-lg ${className || ''}`}
               autoFocus={autoFocus}
             />
             

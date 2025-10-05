@@ -717,6 +717,10 @@ export default function Practice() {
                       onKeyDown={(e) => handleKeyPress(e, 1)}
                       placeholder="Type your answer here for live analysis..."
                       className="min-h-[100px] text-sm"
+                      markScheme={markScheme}
+                      question={question}
+                      maxMarks={maxMarks}
+                      onMaxMarksChange={setMaxMarks}
                     />
                   ) : (
                     <Textarea
