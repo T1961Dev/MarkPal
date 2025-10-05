@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { DashboardLayout } from "@/components/dashboard-layout"
@@ -59,7 +59,7 @@ interface FeedbackResult {
   detailedFeedback?: string
 }
 
-export default function Practice() {
+function PracticeContent() {
   const { user, session } = useAuth()
   const searchParams = useSearchParams()
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -1025,5 +1025,22 @@ export default function Practice() {
         </div>
       </div>
     </DashboardLayout>
+  )
+}
+
+export default function Practice() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading practice page...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    }>
+      <PracticeContent />
+    </Suspense>
   )
 }
