@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: mark-pal
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NPM_CONFIG_CACHE
+        value: /tmp/.npm
+    buildFilter:
+      paths:
+        - app/**
+        - package.json
+        - package-lock.json
+        - next.config.ts
+        - tsconfig.json
+        - eslint.config.mjs
+        - postcss.config.mjs
+        - tailwind.config.js
