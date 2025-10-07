@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -11,8 +11,11 @@ import {
   Award, 
   Edit3, 
   RotateCcw,
-  Clock
+  Clock,
+  Crown
 } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import { getUser } from "@/lib/supabase"
 
 interface SavedQuestion {
   id: string
@@ -60,6 +63,26 @@ export function SavedQuestionVersionsDialog({
   onImproveVersion,
   onStartFresh
 }: SavedQuestionVersionsDialogProps) {
+  const { user } = useAuth()
+  const [userData, setUserData] = useState<any>(null)
+
+  useEffect(() => {
+    if (user) {
+      loadUserData()
+    }
+  }, [user])
+
+  const loadUserData = async () => {
+    if (!user) return
+    try {
+      const data = await getUser(user.id)
+      setUserData(data)
+    } catch (error) {
+      console.error('Error loading user data:', error)
+    }
+  }
+
+  const isProPlus = userData?.tier === 'pro+'
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
@@ -195,10 +218,15 @@ export function SavedQuestionVersionsDialog({
                     <div className="flex gap-2 mt-4">
                       <Button
                         size="sm"
-                        onClick={() => handleImprove(version)}
-                        className="w-full"
+                        onClick={isProPlus ? () => handleImprove(version) : undefined}
+                        disabled={!isProPlus}
+                        className={`w-full ${!isProPlus ? 'opacity-60 cursor-not-allowed' : ''}`}
                       >
-                        <Edit3 className="h-3 w-3 mr-1" />
+                        {isProPlus ? (
+                          <Edit3 className="h-3 w-3 mr-1" />
+                        ) : (
+                          <Crown className="h-3 w-3 mr-1" />
+                        )}
                         Improve This Version
                       </Button>
                     </div>

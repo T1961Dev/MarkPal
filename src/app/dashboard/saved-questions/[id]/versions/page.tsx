@@ -14,9 +14,10 @@ import {
   Edit3, 
   RotateCcw,
   Clock,
-  ArrowLeft
+  ArrowLeft,
+  Crown
 } from "lucide-react"
-import { SavedQuestion, getSavedQuestionById, getSavedQuestions } from "@/lib/supabase"
+import { SavedQuestion, getSavedQuestionById, getSavedQuestions, getUser } from "@/lib/supabase"
 
 export default function SavedQuestionVersionsPage() {
   const { user } = useAuth()
@@ -25,12 +26,26 @@ export default function SavedQuestionVersionsPage() {
   const [question, setQuestion] = useState<SavedQuestion | null>(null)
   const [loading, setLoading] = useState(true)
   const [allVersions, setAllVersions] = useState<SavedQuestion[]>([])
+  const [userData, setUserData] = useState<any>(null)
 
   useEffect(() => {
     if (user && params.id) {
       loadQuestion()
+      loadUserData()
     }
   }, [user, params.id])
+
+  const loadUserData = async () => {
+    if (!user) return
+    try {
+      const data = await getUser(user.id)
+      setUserData(data)
+    } catch (error) {
+      console.error('Error loading user data:', error)
+    }
+  }
+
+  const isProPlus = userData?.tier === 'pro+'
 
   const loadQuestion = async () => {
     if (!user || !params.id) return
@@ -232,10 +247,15 @@ export default function SavedQuestionVersionsPage() {
                 <div className="flex gap-2 mt-4">
                   <Button
                     size="sm"
-                    onClick={() => handleImprove(version)}
-                    className="w-full"
+                    onClick={isProPlus ? () => handleImprove(version) : undefined}
+                    disabled={!isProPlus}
+                    className={`w-full ${!isProPlus ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
-                    <Edit3 className="h-3 w-3 mr-1" />
+                    {isProPlus ? (
+                      <Edit3 className="h-3 w-3 mr-1" />
+                    ) : (
+                      <Crown className="h-3 w-3 mr-1" />
+                    )}
                     Improve This Version
                   </Button>
                 </div>

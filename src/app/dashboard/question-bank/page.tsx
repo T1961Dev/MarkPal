@@ -164,7 +164,12 @@ function QuestionBankContent() {
       console.log('API URL:', `/api/questions?${params}`)
       
       const response = await fetch(`/api/questions?${params}&t=${Date.now()}`, {
-        cache: 'no-store' // Always fetch fresh data
+        cache: 'no-store', // Always fetch fresh data
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       })
       const data = await response.json()
       
@@ -192,7 +197,12 @@ function QuestionBankContent() {
     try {
       setPapersLoading(true)
       const response = await fetch(`/api/papers?t=${Date.now()}`, {
-        cache: 'no-store'
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       })
       const data = await response.json()
       

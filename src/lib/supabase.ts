@@ -139,7 +139,7 @@ export const saveQuestion = async (questionData: Omit<SavedQuestion, 'id' | 'cre
 
 // Cache for saved questions
 const savedQuestionsCache = new Map<string, { data: any[], timestamp: number }>()
-const SAVED_QUESTIONS_CACHE_DURATION = 30000 // 30 seconds
+const SAVED_QUESTIONS_CACHE_DURATION = 10000 // 10 seconds
 
 export const getSavedQuestions = async (userId: string) => {
   // Check cache first
@@ -259,7 +259,7 @@ export const getLatestAttemptForQuestion = async (userId: string, questionId: st
 
 // Cache for individual saved questions
 const savedQuestionCache = new Map<string, { data: SavedQuestion, timestamp: number }>()
-const SAVED_QUESTION_CACHE_DURATION = 30000 // 30 seconds
+const SAVED_QUESTION_CACHE_DURATION = 10000 // 10 seconds
 
 export const getSavedQuestionById = async (questionId: string, userId: string): Promise<SavedQuestion | null> => {
   const cacheKey = `${userId}-${questionId}`
@@ -306,7 +306,7 @@ export interface User {
 
 // Simple cache to avoid repeated queries
 const userCache = new Map<string, { data: User; timestamp: number }>()
-const CACHE_DURATION = 30000 // 30 seconds
+const CACHE_DURATION = 10000 // 10 seconds
 
 // localStorage cache for instant data
 const STORAGE_KEY = 'markpal_user_data'
@@ -354,6 +354,8 @@ export const invalidateUserCache = (userId: string) => {
 // Clear all cache
 export const clearUserCache = () => {
   userCache.clear()
+  savedQuestionsCache.clear()
+  savedQuestionCache.clear()
   // Clear all localStorage entries
   Object.keys(localStorage).forEach(key => {
     if (key.startsWith(STORAGE_KEY)) {
@@ -362,19 +364,36 @@ export const clearUserCache = () => {
   })
 }
 
-export const getUser = async (userId: string, accessToken?: string): Promise<User | null> => {
-  // 1. Check localStorage first (instant)
-  const storedData = getUserFromStorage(userId)
-  if (storedData) {
-    // Update in-memory cache with stored data
-    userCache.set(userId, { data: storedData, timestamp: Date.now() })
-    return storedData
+// Invalidate saved questions cache
+export const invalidateSavedQuestionsCache = (userId: string) => {
+  savedQuestionsCache.delete(userId)
+  // Clear individual saved question cache entries for this user
+  for (const key of savedQuestionCache.keys()) {
+    if (key.startsWith(`${userId}-`)) {
+      savedQuestionCache.delete(key)
+    }
   }
-  
-  // 2. Check in-memory cache
-  const cached = userCache.get(userId)
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-    return cached.data
+}
+
+export const getUser = async (userId: string, accessToken?: string, forceRefresh: boolean = false): Promise<User | null> => {
+  // If force refresh is requested, skip all caching
+  if (forceRefresh) {
+    userCache.delete(userId)
+    localStorage.removeItem(`${STORAGE_KEY}_${userId}`)
+  } else {
+    // 1. Check localStorage first (instant)
+    const storedData = getUserFromStorage(userId)
+    if (storedData) {
+      // Update in-memory cache with stored data
+      userCache.set(userId, { data: storedData, timestamp: Date.now() })
+      return storedData
+    }
+    
+    // 2. Check in-memory cache
+    const cached = userCache.get(userId)
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.data
+    }
   }
   
   // Only create client if we need to make a database call

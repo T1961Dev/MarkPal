@@ -168,12 +168,12 @@ function PracticeContent() {
     }
   }, [currentSlide])
 
-  // Redirect non-Pro+ users
-  useEffect(() => {
-    if (userData && userData.tier !== 'pro+') {
-      window.location.href = '/dashboard'
-    }
-  }, [userData])
+  // Redirect non-Pro+ users (DISABLED - allowing all users to access practice)
+  // useEffect(() => {
+  //   if (userData && userData.tier !== 'pro+') {
+  //     window.location.href = '/dashboard'
+  //   }
+  // }, [userData])
 
   const loadUserData = async () => {
     if (!user) return
@@ -514,22 +514,37 @@ function PracticeContent() {
     )
   }
 
-  if (!user || loading) {
+  if (!user) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading...</p>
+            <p className="text-muted-foreground">Loading practice mode...</p>
           </div>
         </div>
       </DashboardLayout>
     )
   }
 
-  if (userData && userData.tier !== 'pro+') {
-    return null // Will redirect
+  // Show loading only briefly, then show content even if userData is still loading
+  if (loading && !userData) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading practice mode...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
+
+  // Allow all users to access practice (tier check disabled)
+  // if (userData && userData.tier !== 'pro+') {
+  //   return null // Will redirect
+  // }
 
   return (
     <DashboardLayout>
@@ -1032,10 +1047,10 @@ export default function Practice() {
   return (
     <Suspense fallback={
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
+        <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading practice page...</p>
+            <p className="text-muted-foreground">Loading practice mode...</p>
           </div>
         </div>
       </DashboardLayout>

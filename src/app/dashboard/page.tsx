@@ -37,30 +37,32 @@ export default function Dashboard() {
   const [welcomePopupOpen, setWelcomePopupOpen] = useState(false)
   const [timePeriod, setTimePeriod] = useState<'today' | 'week' | 'month' | 'alltime'>('alltime')
 
-  const loadUserData = useCallback(async (retryCount = 0) => {
+  const loadUserData = useCallback(async (retryCount = 0, forceRefresh = false) => {
     if (!user || !session) return
     
     try {
       setLoading(true)
       
-      // Use cached data first for instant loading
-      const cachedData = getOptimisticUserData(user.id)
-      if (cachedData) {
-        setUserData(cachedData)
-        // Load stats in background
-        getUserStats(user.id, session.access_token, timePeriod).then(setUserStats)
-        
-        // Check welcome popup
-        if (cachedData.has_seen_welcome === false) {
-          setWelcomePopupOpen(true)
+      // Only use cached data if not forcing refresh and we have cached data
+      if (!forceRefresh) {
+        const cachedData = getOptimisticUserData(user.id)
+        if (cachedData) {
+          setUserData(cachedData)
+          // Load stats in background
+          getUserStats(user.id, session.access_token, timePeriod).then(setUserStats)
+          
+          // Check welcome popup
+          if (cachedData.has_seen_welcome === false) {
+            setWelcomePopupOpen(true)
+          }
+          setLoading(false)
+          return
         }
-        setLoading(false)
-        return
       }
       
-      // Only fetch from database if no cached data
+      // Fetch fresh data from database
       const [data, stats] = await Promise.all([
-        getUser(user.id, session.access_token),
+        getUser(user.id, session.access_token, forceRefresh),
         getUserStats(user.id, session.access_token, timePeriod)
       ])
       setUserData(data)
@@ -126,7 +128,7 @@ export default function Dashboard() {
   useEffect(() => {
     const handleQuestionsUsed = () => {
       if (user && session) {
-        loadUserData()
+        loadUserData() // Normal refresh when data changes
       }
     }
     
@@ -148,7 +150,7 @@ export default function Dashboard() {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && user && session) {
-        loadUserData()
+        loadUserData() // Normal refresh when page becomes visible
       }
     }
 
@@ -162,7 +164,7 @@ export default function Dashboard() {
 
     const interval = setInterval(() => {
       if (!document.hidden) {
-        loadUserData()
+        loadUserData() // Normal refresh without force
       }
     }, 30000) // Refresh every 30 seconds
 

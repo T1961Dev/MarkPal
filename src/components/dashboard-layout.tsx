@@ -175,7 +175,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && user && session) {
-        loadUserData()
+        loadUserData() // Normal refresh when page becomes visible
       }
     }
 
