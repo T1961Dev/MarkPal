@@ -51,7 +51,7 @@ export function AnswerHighlighter({ answerText, highlights }: AnswerHighlighterP
     // Sort highlights by length (longest first) to handle overlapping matches
     const sortedHighlights = [...highlights].sort((a, b) => b.text.length - a.text.length);
     
-    let result = text;
+    const result = text;
     const highlightRanges: Array<{
       start: number;
       end: number;

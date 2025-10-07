@@ -79,7 +79,7 @@ export default function Help() {
             </p>
           </div>
           <Badge variant="secondary" className="text-sm">
-            We're here to help!
+            We&apos;re here to help!
           </Badge>
         </div>
 
@@ -167,7 +167,7 @@ export default function Help() {
                 Contact Support
               </CardTitle>
               <CardDescription>
-                Need more help? We're here for you
+                Need more help? We&apos;re here for you
               </CardDescription>
             </CardHeader>
             <CardContent>

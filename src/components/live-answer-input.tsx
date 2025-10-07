@@ -217,7 +217,7 @@ export function LiveAnswerInput({
     }
 
     const sortedHighlights = [...highlights].sort((a, b) => a.start - b.start)
-    let result = []
+    const result = []
     let lastIndex = 0
 
     sortedHighlights.forEach((highlight, index) => {

@@ -56,7 +56,7 @@ interface DashboardLayoutProps {
 interface NavigationItem {
   title: string
   url: string
-  icon: any
+  icon: React.ComponentType<{ className?: string }>
 }
 
 const navigationItems: NavigationItem[] = [

@@ -64,7 +64,7 @@ export function SavedQuestionVersionsDialog({
   onStartFresh
 }: SavedQuestionVersionsDialogProps) {
   const { user } = useAuth()
-  const [userData, setUserData] = useState<any>(null)
+  const [userData, setUserData] = useState<{ tier: string } | null>(null)
 
   useEffect(() => {
     if (user) {

@@ -46,7 +46,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="apple-touch-icon" href="/pics/logo.png" />
         <link rel="icon" type="image/png" href="/pics/logo.png" />
-        <script src="/disable-sw.js"></script>
+        <script src="/disable-sw.js" async></script>
       </head>
       <body
         className={`${inter.variable} font-sans antialiased`}

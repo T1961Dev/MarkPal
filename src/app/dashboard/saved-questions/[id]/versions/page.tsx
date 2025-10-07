@@ -26,7 +26,7 @@ export default function SavedQuestionVersionsPage() {
   const [question, setQuestion] = useState<SavedQuestion | null>(null)
   const [loading, setLoading] = useState(true)
   const [allVersions, setAllVersions] = useState<SavedQuestion[]>([])
-  const [userData, setUserData] = useState<any>(null)
+  const [userData, setUserData] = useState<{ tier: string } | null>(null)
 
   useEffect(() => {
     if (user && params.id) {

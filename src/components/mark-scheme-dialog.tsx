@@ -113,7 +113,7 @@ export function MarkSchemeDialog({
     }
 
     // Parse structured mark scheme
-    let allExtraInfo: string[] = []
+    const allExtraInfo: string[] = []
     let aoSpecRef = ''
     let inImportantNotes = false
     let currentAnswerPoint: MarkSchemePoint | null = null
