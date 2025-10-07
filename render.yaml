@@ -3,12 +3,16 @@ services:
     name: mark-pal
     env: node
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production
       - key: NPM_CONFIG_CACHE
         value: /tmp/.npm
+      - key: NEXT_BUILD_ID
+        value: "build-$(date +%s)"
+      - key: FORCE_REBUILD
+        value: "true"
     buildFilter:
       paths:
         - app/**

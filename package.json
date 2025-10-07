@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "rm -rf .next && next build",
+    "build": "rm -rf .next && rm -rf node_modules/.cache && next build",
     "start": "next start",
     "lint": "eslint"
   },
