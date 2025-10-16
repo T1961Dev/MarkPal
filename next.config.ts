@@ -9,8 +9,6 @@ const nextConfig: NextConfig = {
     }
     return `build-${Date.now()}`
   },
-  // Configure output for better static asset serving
-  output: 'standalone',
   // Ensure proper asset handling
   trailingSlash: false,
   // Configure headers for static assets
