@@ -2,24 +2,19 @@ services:
   - type: web
     name: mark-pal
     env: node
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
+    buildCommand: cd app && npm install && npm run build
+    startCommand: cd app && npm run start
     envVars:
       - key: NODE_ENV
         value: production
       - key: NPM_CONFIG_CACHE
         value: /tmp/.npm
-      - key: NEXT_BUILD_ID
-        value: "build-$(date +%s)"
-      - key: FORCE_REBUILD
-        value: "true"
     buildFilter:
       paths:
-        - app/**
-        - package.json
-        - package-lock.json
-        - next.config.ts
-        - tsconfig.json
-        - eslint.config.mjs
-        - postcss.config.mjs
-        - tailwind.config.js
+        - app/**/*
+        - app/package.json
+        - app/package-lock.json
+        - app/next.config.ts
+        - app/tsconfig.json
+        - app/eslint.config.mjs
+        - app/postcss.config.mjs
