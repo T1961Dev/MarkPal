@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { BookOpen, Clock, Target, Brain, Save, Sparkles, Edit3, ArrowLeft, History, RotateCcw, Eye, FileText } from 'lucide-react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { SaveQuestionDialog } from '@/components/save-question-dialog';
-import { saveQuestion, createQuestionAttempt, getQuestionAttempts, getUser, User } from '@/lib/supabase';
+import { saveQuestion, createQuestionAttempt, getQuestionAttempts, getUser, User, getNextVersionNumber } from '@/lib/supabase';
 import { QuestionBankLiveInput } from '@/components/question-bank-live-input';
 import { AnswerHighlighter } from '@/components/answer-highlighter';
 import { ProgressButton } from '@/components/progress-button';
@@ -267,9 +267,8 @@ function QuestionPageContent() {
     
     setSavingQuestion(true);
     try {
-      // Get the next version number for this question
-      const existingSavedQuestions = await getQuestionAttempts(user.id, question.id);
-      const versionNumber = existingSavedQuestions.length + 1;
+      // Get the next version number for this question (grouped by question_id from question bank)
+      const versionNumber = await getNextVersionNumber(user.id, question.id, name);
 
       const savedQuestion = await saveQuestion({
         user_id: user.id,

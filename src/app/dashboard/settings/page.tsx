@@ -12,16 +12,13 @@ import { Separator } from "@/components/ui/separator"
 import { 
   Settings, 
   User, 
-  Bell, 
-  Shield, 
-  CreditCard,
   Download,
   Trash2,
   Save,
   Eye,
   EyeOff
 } from "lucide-react"
-import { getUser, User as UserType, updateUserProfile } from "@/lib/supabase"
+import { getUser, User as UserType, updateUserProfile, supabase } from "@/lib/supabase"
 import { toast } from "sonner"
 import { PricingPopup } from "@/components/pricing-popup"
 
@@ -36,7 +33,6 @@ export default function SettingsPage() {
   // Form states
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
-  const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
 
@@ -75,58 +71,179 @@ export default function SettingsPage() {
       return
     }
     
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (email && !emailRegex.test(email)) {
+      toast.error("Please enter a valid email address")
+      return
+    }
+    
     setSaving(true)
     try {
       // Update the user's name in the database
       const updatedUser = await updateUserProfile(user.id, { fullName: name.trim() })
       setUserData(updatedUser)
       
-      // Show success message
-      toast.success("Profile updated successfully!")
-    } catch (error) {
+      // Update email if it has changed
+      if (email !== user.email) {
+        const { error: emailError } = await supabase.auth.updateUser({
+          email: email
+        })
+        
+        if (emailError) {
+          throw emailError
+        }
+        
+        toast.success("Profile and email updated successfully! Please check your email to confirm the new address.")
+      } else {
+        toast.success("Profile updated successfully!")
+      }
+    } catch (error: any) {
       console.error('Error saving profile:', error)
-      toast.error("Failed to update profile. Please try again.")
+      toast.error(error.message || "Failed to update profile. Please try again.")
     } finally {
       setSaving(false)
     }
   }
 
   const handleChangePassword = async () => {
+    if (!newPassword || !confirmPassword) {
+      toast.error("Please fill in all password fields")
+      return
+    }
+    
     if (newPassword !== confirmPassword) {
-      alert("Passwords don't match")
+      toast.error("New passwords don't match")
+      return
+    }
+    
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters long")
       return
     }
     
     setSaving(true)
     try {
-      // Change password logic here
-      console.log("Changing password")
-      // Show success message
-    } catch (error) {
+      // Update password using Supabase auth
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+      
+      if (error) {
+        throw error
+      }
+      
+      // Clear password fields
+      setNewPassword("")
+      setConfirmPassword("")
+      
+      toast.success("Password updated successfully!")
+    } catch (error: any) {
       console.error('Error changing password:', error)
+      toast.error(error.message || "Failed to update password. Please try again.")
     } finally {
       setSaving(false)
     }
   }
 
   const handleDeleteAccount = async () => {
-    if (confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-      try {
-        // Delete account logic here
-        console.log("Deleting account")
-        await signOut()
-      } catch (error) {
-        console.error('Error deleting account:', error)
+    const confirmText = "DELETE"
+    const userInput = prompt(
+      `Are you sure you want to permanently delete your account? This action cannot be undone.\n\nAll your data including saved questions, question attempts, and progress will be permanently lost.\n\nType "${confirmText}" to confirm:`
+    )
+    
+    if (userInput !== confirmText) {
+      return
+    }
+    
+    if (!user) return
+    
+    setSaving(true)
+    try {
+      // Delete user data from database first
+      const { error: deleteError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', user.id)
+      
+      if (deleteError) {
+        console.error('Error deleting user data:', deleteError)
+        // Continue with auth deletion even if database deletion fails
       }
+      
+      // Delete the auth user (this will cascade delete related data if foreign keys are set up)
+      const { error: authError } = await supabase.auth.admin.deleteUser(user.id)
+      
+      if (authError) {
+        // If admin delete fails, try user-initiated deletion
+        const { error: userDeleteError } = await supabase.rpc('delete_user')
+        if (userDeleteError) {
+          throw userDeleteError
+        }
+      }
+      
+      toast.success("Account deleted successfully")
+      await signOut()
+    } catch (error: any) {
+      console.error('Error deleting account:', error)
+      toast.error(error.message || "Failed to delete account. Please contact support.")
+    } finally {
+      setSaving(false)
     }
   }
 
   const handleExportData = async () => {
+    if (!user) return
+    
     try {
-      // Export data logic here
-      console.log("Exporting data")
-    } catch (error) {
+      // Get user's saved questions and question attempts
+      const [savedQuestions, questionAttempts] = await Promise.all([
+        supabase
+          .from('saved_questions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('question_attempts')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+      ])
+      
+      if (savedQuestions.error) throw savedQuestions.error
+      if (questionAttempts.error) throw questionAttempts.error
+      
+      // Create export data object
+      const exportData = {
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: userData?.fullName,
+          tier: userData?.tier,
+          createdAt: userData?.created_at
+        },
+        savedQuestions: savedQuestions.data || [],
+        questionAttempts: questionAttempts.data || [],
+        exportDate: new Date().toISOString()
+      }
+      
+      // Create and download JSON file
+      const dataStr = JSON.stringify(exportData, null, 2)
+      const dataBlob = new Blob([dataStr], { type: 'application/json' })
+      const url = URL.createObjectURL(dataBlob)
+      
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `markpal-data-export-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      
+      toast.success("Data exported successfully!")
+    } catch (error: any) {
       console.error('Error exporting data:', error)
+      toast.error(error.message || "Failed to export data. Please try again.")
     }
   }
 
@@ -182,18 +299,6 @@ export default function SettingsPage() {
                   <Button variant="ghost" className="w-full justify-start">
                     <User className="h-4 w-4 mr-2" />
                     Profile
-                  </Button>
-                  <Button variant="ghost" className="w-full justify-start">
-                    <Bell className="h-4 w-4 mr-2" />
-                    Notifications
-                  </Button>
-                  <Button variant="ghost" className="w-full justify-start">
-                    <Shield className="h-4 w-4 mr-2" />
-                    Privacy
-                  </Button>
-                  <Button variant="ghost" className="w-full justify-start">
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Billing
                   </Button>
                 </div>
               </CardContent>
@@ -263,41 +368,31 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Current Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="currentPassword"
-                      type={showPassword ? "text" : "password"}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Enter current password"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="newPassword">New Password</Label>
-                    <Input
-                      id="newPassword"
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new password"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="newPassword"
+                        type={showPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password</Label>

@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 export const metadata: Metadata = {
   title: "Mark Pal",
   description: "Get instant AI feedback on your GCSE and A-Level answers with mark scheme analysis",
-  // manifest: "/manifest.json", // Disabled to prevent service worker registration
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -46,7 +46,6 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="apple-touch-icon" href="/pics/logo.png" />
         <link rel="icon" type="image/png" href="/pics/logo.png" />
-        <script src="/disable-sw.js" async></script>
       </head>
       <body
         className={`${inter.variable} font-sans antialiased`}

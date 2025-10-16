@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,16 +29,16 @@ import {
   Brain,
   Clock
 } from "lucide-react"
+import { QuestionBankLiveInput } from "@/components/question-bank-live-input"
 import { MarkSchemeDialog } from "@/components/mark-scheme-dialog"
 import { ImageUpload } from "@/components/image-upload"
-import { LiveAnswerInput } from "@/components/live-answer-input"
 import { SaveQuestionDialog } from "@/components/save-question-dialog"
 import { ValidationPopup } from "@/components/validation-popup"
 import { AnswerHighlighter } from "@/components/answer-highlighter"
 import { ProgressButton } from "@/components/progress-button"
 import { toast } from "sonner"
 import { PricingPopup } from "@/components/pricing-popup"
-import { getUser, User as UserType, saveQuestion, getOptimisticUserData } from "@/lib/supabase"
+import { getUser, User as UserType, saveQuestion, getOptimisticUserData, getNextVersionNumber } from "@/lib/supabase"
 
 interface FeedbackResult {
   score: number
@@ -59,9 +59,10 @@ interface FeedbackResult {
   detailedFeedback?: string
 }
 
-function PracticeContent() {
+export default function Practice() {
   const { user, session } = useAuth()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [currentSlide, setCurrentSlide] = useState(0)
   const [question, setQuestion] = useState("")
   const [markScheme, setMarkScheme] = useState("")
@@ -84,6 +85,9 @@ function PracticeContent() {
   const [loading, setLoading] = useState(true)
   const [formattedMarkScheme, setFormattedMarkScheme] = useState<string>("")
   const [formattingMarkScheme, setFormattingMarkScheme] = useState(false)
+  const [liveHighlights, setLiveHighlights] = useState<Array<{ text: string; type: "success" | "warning" | "error"; tooltip?: string }>>([])
+  const [isLiveProcessing, setIsLiveProcessing] = useState(false)
+  const [liveScore, setLiveScore] = useState<number | null>(null)
 
   useEffect(() => {
     if (user) {
@@ -168,12 +172,6 @@ function PracticeContent() {
     }
   }, [currentSlide])
 
-  // Redirect non-Pro+ users (DISABLED - allowing all users to access practice)
-  // useEffect(() => {
-  //   if (userData && userData.tier !== 'pro+') {
-  //     window.location.href = '/dashboard'
-  //   }
-  // }, [userData])
 
   const loadUserData = async () => {
     if (!user) return
@@ -200,7 +198,7 @@ function PracticeContent() {
   }
 
   const formatMarkScheme = async () => {
-    if (!markScheme.trim()) return
+    if (!markScheme || !markScheme.trim()) return
     
     try {
       setFormattingMarkScheme(true)
@@ -237,6 +235,37 @@ function PracticeContent() {
     setValidationPopup({ message, isVisible: true })
   }
 
+  const handleLiveAnalysis = async (text: string) => {
+    if (!question || !markScheme || !text || !text.trim()) return
+
+    setIsLiveProcessing(true)
+    try {
+      const response = await fetch('/api/mark-answer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: question,
+          studentAnswer: text,
+          markScheme: markScheme,
+          maxMarks: parseInt(maxMarks) || 10
+        }),
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        setLiveHighlights(data.data.highlights || [])
+        setLiveScore(data.data.score)
+      }
+    } catch (error) {
+      console.error('Error in live analysis:', error)
+    } finally {
+      setIsLiveProcessing(false)
+    }
+  }
+
   const checkAuthAndProceed = (action: () => void) => {
     if (!user) {
       window.location.href = '/'
@@ -256,15 +285,15 @@ function PracticeContent() {
       }
       
       // Validate current slide before proceeding
-      if (currentSlide === 0 && !question.trim() && !questionImage) {
+      if (currentSlide === 0 && (!question || !question.trim()) && !questionImage) {
         showValidationMessage("Please upload an image or enter your question before continuing")
         return
       }
-      if (currentSlide === 1 && !studentAnswer.trim() && !studentAnswerImage) {
+      if (currentSlide === 1 && (!studentAnswer || !studentAnswer.trim()) && !studentAnswerImage) {
         showValidationMessage("Please upload an image or enter your answer before continuing")
         return
       }
-      if (currentSlide === 2 && !markScheme.trim() && !markSchemeImage) {
+      if (currentSlide === 2 && (!markScheme || !markScheme.trim()) && !markSchemeImage) {
         showValidationMessage("Please enter the mark scheme or upload an image before continuing")
         return
       }
@@ -379,7 +408,7 @@ function PracticeContent() {
   }
 
   const handleEvaluate = async () => {
-    if ((!question.trim() && !questionImage) || (!studentAnswer.trim() && !studentAnswerImage)) return
+    if ((!question || !question.trim()) && !questionImage || (!studentAnswer || !studentAnswer.trim()) && !studentAnswerImage) return
     
     checkAuthAndProceed(async () => {
       // Check if user has questions left before evaluating
@@ -417,14 +446,99 @@ function PracticeContent() {
     })
   }
 
+  const handleSaveLiveQuestion = async () => {
+    if (!user || !question || !markScheme || !studentAnswer || liveScore === null) return
+    
+    setSavingQuestion(true)
+    try {
+      // Check if we're improving an existing saved question
+      const urlVersionId = searchParams.get('versionId')
+      let finalName = "Improved Answer"
+      
+      // If we have a versionId, we're improving an existing question
+      // Look up the original saved question to get its name
+      if (urlVersionId) {
+        try {
+          const { getSavedQuestionById } = await import('@/lib/supabase')
+          const originalQuestion = await getSavedQuestionById(urlVersionId, user.id)
+          if (originalQuestion) {
+            finalName = originalQuestion.name
+          }
+        } catch (error) {
+          console.error('Error fetching original question:', error)
+        }
+      }
+      
+      // Get the next version number
+      const versionNumber = await getNextVersionNumber(user.id, undefined, finalName)
+      
+      const savedQuestion = await saveQuestion({
+        user_id: user.id,
+        name: finalName,
+        question: question,
+        mark_scheme: markScheme,
+        student_answer: studentAnswer,
+        score: liveScore,
+        max_score: parseInt(maxMarks) || 10,
+        highlights: liveHighlights,
+        analysis: {
+          strengths: [],
+          weaknesses: [],
+          improvements: [],
+          missingPoints: []
+        },
+        detailed_feedback: "",
+        version_number: versionNumber
+      }, session?.access_token)
+      
+      // Show success and redirect
+      toast.success("Question saved successfully!", {
+        description: "Your improved answer has been saved as a new version.",
+        duration: 3000,
+      })
+      
+      // Redirect to the saved question
+      router.push(`/dashboard/saved-questions/${savedQuestion.id}`)
+      
+    } catch (error) {
+      console.error('Error saving live question:', error)
+      toast.error("Failed to save question. Please try again.")
+    } finally {
+      setSavingQuestion(false)
+    }
+  }
+
   const handleSaveQuestion = async (name: string) => {
     if (!user || !feedbackResult) return
     
     setSavingQuestion(true)
     try {
+      // Check if we're improving an existing saved question
+      const urlVersionId = searchParams.get('versionId')
+      let finalName = name
+      
+      // If we have a versionId, we're improving an existing question
+      // Look up the original saved question to get its name for proper version grouping
+      if (urlVersionId) {
+        try {
+          const { getSavedQuestionById } = await import('@/lib/supabase')
+          const originalQuestion = await getSavedQuestionById(urlVersionId, user.id)
+          if (originalQuestion) {
+            // Use the original question's name to keep all versions grouped together
+            finalName = originalQuestion.name
+          }
+        } catch (error) {
+          console.error('Error fetching original question:', error)
+          // Continue with provided name if we can't fetch the original
+        }
+      }
+      
+      // Get the next version number for this question (grouped by name for practice questions)
+      const versionNumber = await getNextVersionNumber(user.id, undefined, finalName)
+      
       const savedQuestion = await saveQuestion({
         user_id: user.id,
-        name,
+        name: finalName,
         question: feedbackResult.question,
         mark_scheme: feedbackResult.markScheme,
         student_answer: studentAnswer,
@@ -438,7 +552,7 @@ function PracticeContent() {
           missingPoints: []
         },
         detailed_feedback: feedbackResult.detailedFeedback || "",
-        version_number: 1
+        version_number: versionNumber
       }, session?.access_token)
       
       setSaveDialogOpen(false)
@@ -514,37 +628,18 @@ function PracticeContent() {
     )
   }
 
-  if (!user) {
+  if (!user || loading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading practice mode...</p>
+            <p className="text-muted-foreground">Loading...</p>
           </div>
         </div>
       </DashboardLayout>
     )
   }
-
-  // Show loading only briefly, then show content even if userData is still loading
-  if (loading && !userData) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading practice mode...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    )
-  }
-
-  // Allow all users to access practice (tier check disabled)
-  // if (userData && userData.tier !== 'pro+') {
-  //   return null // Will redirect
-  // }
 
   return (
     <DashboardLayout>
@@ -614,7 +709,7 @@ function PracticeContent() {
                   <div>
                     <h3 className="font-semibold text-blue-900">Improvement Mode</h3>
                     <p className="text-sm text-blue-700">
-                      You're improving a previous answer. The form has been pre-filled with your saved question data.
+                      You're improving a previous answer. {isLiveMode ? 'Live analysis is enabled - your score updates as you type.' : 'Enable live analysis for real-time feedback.'}
                     </p>
                   </div>
                 </div>
@@ -670,9 +765,9 @@ function PracticeContent() {
 
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-muted-foreground">
-                    {questionImage ? "Image uploaded" : question.trim() ? "Text entered" : "Upload image or enter text"}
+                    {questionImage ? "Image uploaded" : (question && question.trim()) ? "Text entered" : "Upload image or enter text"}
                   </div>
-                  <Button onClick={nextSlide} disabled={isAnimating || (!question.trim() && !questionImage)}>
+                  <Button onClick={nextSlide} disabled={isAnimating || ((!question || !question.trim()) && !questionImage)}>
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
@@ -726,16 +821,17 @@ function PracticeContent() {
                     <span>Or type your answer manually</span>
                   </div>
                   {isLiveMode ? (
-                    <LiveAnswerInput
+                    <QuestionBankLiveInput
                       value={studentAnswer}
                       onChange={setStudentAnswer}
-                      onKeyDown={(e) => handleKeyPress(e, 1)}
-                      placeholder="Type your answer here for live analysis..."
-                      className="min-h-[100px] text-sm"
-                      markScheme={markScheme}
-                      question={question}
-                      maxMarks={maxMarks}
-                      onMaxMarksChange={setMaxMarks}
+                      onAnalysis={handleLiveAnalysis}
+                      highlights={liveHighlights}
+                      isLoading={isLiveProcessing}
+                      score={liveScore}
+                      maxScore={parseInt(maxMarks) || 10}
+                      placeholder="Type your improved answer here for live analysis..."
+                      onSave={handleSaveLiveQuestion}
+                      isSaving={savingQuestion}
                     />
                   ) : (
                     <Textarea
@@ -748,8 +844,8 @@ function PracticeContent() {
                   )}
                 </div>
 
-                {/* Live Analysis Toggle - Pro+ Only */}
-                {userData?.tier === 'pro+' && (
+                {/* Live Analysis Toggle - Pro+ Only and Improvement Mode Only */}
+                {userData?.tier === 'pro+' && isImprovementMode && (
                   <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-purple-100 rounded-full">
@@ -758,7 +854,7 @@ function PracticeContent() {
                       <div>
                         <h4 className="font-medium text-purple-900">Live Analysis Mode</h4>
                         <p className="text-sm text-purple-700">
-                          Get real-time feedback as you type (Pro+ feature)
+                          Get real-time AI marking as you type - see your score and highlights instantly
                         </p>
                       </div>
                     </div>
@@ -798,14 +894,14 @@ function PracticeContent() {
 
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-muted-foreground">
-                    {studentAnswerImage ? "Answer image uploaded" : studentAnswer.trim() ? "Answer text entered" : "Upload image or enter text"}
+                    {studentAnswerImage ? "Answer image uploaded" : (studentAnswer && studentAnswer.trim()) ? "Answer text entered" : "Upload image or enter text"}
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={prevSlide} disabled={isAnimating}>
                       <ArrowLeft className="h-4 w-4 mr-2" />
                       Back
                     </Button>
-                    <Button onClick={nextSlide} disabled={isAnimating || (!studentAnswer.trim() && !studentAnswerImage)}>
+                    <Button onClick={nextSlide} disabled={isAnimating || ((!studentAnswer || !studentAnswer.trim()) && !studentAnswerImage)}>
                       Next <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </div>
@@ -899,6 +995,42 @@ function PracticeContent() {
                 </CardContent>
               </Card>
 
+              {/* Mark Scheme Viewer */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Mark Scheme
+                  </CardTitle>
+                  <CardDescription>
+                    Review the official mark scheme for this question
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="text-sm text-muted-foreground">
+                      <strong>Max Marks:</strong> {maxMarks || feedbackResult.maxScore}
+                    </div>
+                    <div className="mt-4">
+                      <MarkSchemeDialog 
+                        questionNumber="Practice Question" 
+                        markScheme={feedbackResult.markScheme || formattedMarkScheme || markScheme} 
+                        maxMarks={parseInt(maxMarks) || feedbackResult.maxScore || 10}
+                      >
+                        <Button 
+                          variant="outline" 
+                          className="w-full"
+                          disabled={formattingMarkScheme}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          {formattingMarkScheme ? 'Formatting...' : 'View Mark Scheme'}
+                        </Button>
+                      </MarkSchemeDialog>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Feedback Content */}
               <Card>
                 <CardHeader>
@@ -969,45 +1101,6 @@ function PracticeContent() {
                 </div>
               )}
 
-              {/* Mark Scheme Viewer */}
-              <Card className="mt-8">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Mark Scheme
-                  </CardTitle>
-                  <CardDescription>
-                    Review the official mark scheme for this question
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="text-sm text-muted-foreground">
-                      <strong>Question:</strong> {question}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      <strong>Max Marks:</strong> {maxMarks}
-                    </div>
-                    <div className="mt-4">
-                      <MarkSchemeDialog 
-                        questionNumber="Practice Question" 
-                        markScheme={formattedMarkScheme || markScheme} 
-                        maxMarks={parseInt(maxMarks) || 10}
-                      >
-                        <Button 
-                          variant="outline" 
-                          className="w-full"
-                          disabled={formattingMarkScheme}
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          {formattingMarkScheme ? 'Formatting...' : 'View Mark Scheme'}
-                        </Button>
-                      </MarkSchemeDialog>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
               {/* Action Buttons */}
               <div className="flex items-center justify-center gap-4">
                 <Button
@@ -1040,22 +1133,5 @@ function PracticeContent() {
         </div>
       </div>
     </DashboardLayout>
-  )
-}
-
-export default function Practice() {
-  return (
-    <Suspense fallback={
-      <DashboardLayout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading practice mode...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    }>
-      <PracticeContent />
-    </Suspense>
   )
 }

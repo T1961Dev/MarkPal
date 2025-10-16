@@ -139,7 +139,7 @@ export const saveQuestion = async (questionData: Omit<SavedQuestion, 'id' | 'cre
 
 // Cache for saved questions
 const savedQuestionsCache = new Map<string, { data: any[], timestamp: number }>()
-const SAVED_QUESTIONS_CACHE_DURATION = 10000 // 10 seconds
+const SAVED_QUESTIONS_CACHE_DURATION = 5000 // 5 seconds - short cache for quick updates
 
 export const getSavedQuestions = async (userId: string) => {
   // Check cache first
@@ -259,7 +259,7 @@ export const getLatestAttemptForQuestion = async (userId: string, questionId: st
 
 // Cache for individual saved questions
 const savedQuestionCache = new Map<string, { data: SavedQuestion, timestamp: number }>()
-const SAVED_QUESTION_CACHE_DURATION = 10000 // 10 seconds
+const SAVED_QUESTION_CACHE_DURATION = 5000 // 5 seconds - short cache for quick updates
 
 export const getSavedQuestionById = async (questionId: string, userId: string): Promise<SavedQuestion | null> => {
   const cacheKey = `${userId}-${questionId}`
@@ -286,6 +286,47 @@ export const getSavedQuestionById = async (questionId: string, userId: string): 
   return data
 }
 
+// Get the next version number for a question
+export const getNextVersionNumber = async (userId: string, questionId?: string, questionName?: string): Promise<number> => {
+  try {
+    let query = supabase
+      .from('saved_questions')
+      .select('version_number')
+      .eq('user_id', userId)
+    
+    // If we have a question_id (from question bank), use it to group versions
+    if (questionId) {
+      query = query.eq('question_id', questionId)
+    } 
+    // Otherwise, for practice questions, use the question name to group versions
+    else if (questionName) {
+      query = query.eq('name', questionName)
+    }
+    // If neither, this is a brand new question
+    else {
+      return 1
+    }
+    
+    const { data, error } = await query.order('version_number', { ascending: false }).limit(1)
+    
+    if (error) {
+      console.error('Error getting version number:', error)
+      return 1
+    }
+    
+    // If no existing versions, return 1
+    if (!data || data.length === 0) {
+      return 1
+    }
+    
+    // Return the next version number
+    return (data[0].version_number || 0) + 1
+  } catch (error) {
+    console.error('Error in getNextVersionNumber:', error)
+    return 1
+  }
+}
+
 // User management functions
 export interface User {
   id: string
@@ -306,14 +347,19 @@ export interface User {
 
 // Simple cache to avoid repeated queries
 const userCache = new Map<string, { data: User; timestamp: number }>()
-const CACHE_DURATION = 10000 // 10 seconds
+const CACHE_DURATION = 2000 // 2 seconds - short cache for instant updates
 
 // localStorage cache for instant data
 const STORAGE_KEY = 'markpal_user_data'
-const STORAGE_DURATION = 5 * 60 * 1000 // 5 minutes
+const STORAGE_DURATION = 3000 // 3 seconds - very short for instant plan updates
 
 // Get user data from localStorage for instant loading
 export const getUserFromStorage = (userId: string): User | null => {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return null
+  }
+  
   try {
     const stored = localStorage.getItem(`${STORAGE_KEY}_${userId}`)
     if (!stored) return null
@@ -333,6 +379,11 @@ export const getUserFromStorage = (userId: string): User | null => {
 
 // Save user data to localStorage
 export const saveUserToStorage = (userId: string, data: User) => {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+    return
+  }
+  
   try {
     const storageData = {
       data,
@@ -347,53 +398,38 @@ export const saveUserToStorage = (userId: string, data: User) => {
 // Cache invalidation function
 export const invalidateUserCache = (userId: string) => {
   userCache.delete(userId)
-  // Also clear localStorage
-  localStorage.removeItem(`${STORAGE_KEY}_${userId}`)
+  // Also clear localStorage (only in browser)
+  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+    localStorage.removeItem(`${STORAGE_KEY}_${userId}`)
+  }
 }
 
 // Clear all cache
 export const clearUserCache = () => {
   userCache.clear()
-  savedQuestionsCache.clear()
-  savedQuestionCache.clear()
-  // Clear all localStorage entries
-  Object.keys(localStorage).forEach(key => {
-    if (key.startsWith(STORAGE_KEY)) {
-      localStorage.removeItem(key)
-    }
-  })
-}
-
-// Invalidate saved questions cache
-export const invalidateSavedQuestionsCache = (userId: string) => {
-  savedQuestionsCache.delete(userId)
-  // Clear individual saved question cache entries for this user
-  for (const key of savedQuestionCache.keys()) {
-    if (key.startsWith(`${userId}-`)) {
-      savedQuestionCache.delete(key)
-    }
+  // Clear all localStorage entries (only in browser)
+  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith(STORAGE_KEY)) {
+        localStorage.removeItem(key)
+      }
+    })
   }
 }
 
-export const getUser = async (userId: string, accessToken?: string, forceRefresh: boolean = false): Promise<User | null> => {
-  // If force refresh is requested, skip all caching
-  if (forceRefresh) {
-    userCache.delete(userId)
-    localStorage.removeItem(`${STORAGE_KEY}_${userId}`)
-  } else {
-    // 1. Check localStorage first (instant)
-    const storedData = getUserFromStorage(userId)
-    if (storedData) {
-      // Update in-memory cache with stored data
-      userCache.set(userId, { data: storedData, timestamp: Date.now() })
-      return storedData
-    }
-    
-    // 2. Check in-memory cache
-    const cached = userCache.get(userId)
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      return cached.data
-    }
+export const getUser = async (userId: string, accessToken?: string): Promise<User | null> => {
+  // 1. Check localStorage first (instant)
+  const storedData = getUserFromStorage(userId)
+  if (storedData) {
+    // Update in-memory cache with stored data
+    userCache.set(userId, { data: storedData, timestamp: Date.now() })
+    return storedData
+  }
+  
+  // 2. Check in-memory cache
+  const cached = userCache.get(userId)
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data
   }
   
   // Only create client if we need to make a database call
@@ -437,6 +473,38 @@ export const getOptimisticUserData = (userId: string): User | null => {
   
   // Fallback to localStorage for instant data
   return getUserFromStorage(userId)
+}
+
+// Force refresh user data (bypasses all caches)
+export const refreshUserData = async (userId: string, accessToken?: string): Promise<User | null> => {
+  // Clear all caches first
+  invalidateUserCache(userId)
+  
+  // Fetch fresh data from database
+  const client = accessToken ? createServerSupabaseClient(accessToken) : supabase
+  
+  try {
+    const { data, error } = await client
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single()
+
+    if (error) {
+      console.error('Error refreshing user data:', error)
+      throw error
+    }
+    
+    // Update caches with fresh data
+    const updatedUser = await checkAndResetUserQuestionsOptimized(data, client)
+    userCache.set(userId, { data: updatedUser, timestamp: Date.now() })
+    saveUserToStorage(userId, updatedUser)
+    
+    return updatedUser
+  } catch (error) {
+    console.error('Error in refreshUserData:', error)
+    throw error
+  }
 }
 
 export const createUser = async (userId: string, accessToken?: string, fullName?: string, email?: string): Promise<User> => {

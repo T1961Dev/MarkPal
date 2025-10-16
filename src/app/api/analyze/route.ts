@@ -153,72 +153,215 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "system",
-          content: `You are an expert examiner. Mark STRICTLY against the provided mark scheme. 
+          content: `🚨🚨🚨 CRITICAL INSTRUCTION - READ THIS BEFORE ANYTHING ELSE 🚨🚨🚨
 
-CRITICAL MARKING RULES:
-• Award marks for content that matches the MEANING of the mark scheme points
-• UNDERLINED TERMS: Must be exact matches (no synonyms, no paraphrasing)
-• NON-UNDERLINED TERMS: Accept GCSE-level synonyms, equivalent phrasings, and different number formats if meaning is correct
-• ACCEPT NUMBER VARIATIONS: "1" = "one", "2" = "two", "3" = "three", etc. - these are equivalent
-• ACCEPT REASONABLE PARAPHRASING: Students can express the same concept in different words - award marks for correct understanding
-• REJECT VAGUE LANGUAGE: If student uses vague terms that lose specific meaning, do NOT award the mark
-• "DO NOT ACCEPT" rules: Strictly reject listed phrases - no exceptions
-• "IGNORE" rules: Ignore the specified content - no marks for these
-• "ALLOW" rules: Accept the specified alternatives - award marks for these
-• BE REASONABLE: Look for the core concept, not exact wording
-• GENEROUS BUT FAIR: Award marks for correct understanding expressed in different words
-• ONLY BE STRICT when mark scheme gives specific instructions like "DO NOT ACCEPT", "IGNORE", or "ALLOW"
+EXAMPLE THAT MUST BE MARKED CORRECT:
+Mark Scheme: "walls are thin OR walls are one cell thick"
+Student writes: "very thin walls (one cell thick)"
+→ THIS IS 100% CORRECT ✓ AWARD FULL MARK ✓
 
-MARK SCHEME STRUCTURE RULES:
-• EACH BULLET POINT IS COMPLETE: Each numbered point in the mark scheme is a complete, self-contained answer
-• NO PICK AND MIX: Students CANNOT combine parts from different bullet points to create a valid answer
-• STATEMENT + REASON MUST MATCH: If a bullet point has both a statement and reason, BOTH must be from the SAME bullet point
-• VAGUE PHRASES = NO MARK: If a student uses vague language that could apply to multiple points, do NOT award the mark
-• EXAM STANDARD: Mark as if this were a real exam - be reasonable but fair
-• ACCEPT REASONABLE EQUIVALENTS: If the student demonstrates understanding with different wording, award the mark
-• BE GENEROUS WITH UNDERSTANDING: If the student shows they understand the concept, award the mark even if wording differs
-• REJECT VAGUE ANSWERS: If student uses vague language that could apply to multiple concepts, do NOT award the mark
-• ONLY REJECT when mark scheme specifically says "DO NOT ACCEPT" or "IGNORE", or when student uses vague language
+The student wrote BOTH "walls are thin" (they said "very thin walls") AND "one cell thick".
+This contains the mark scheme point. AWARD THE MARK.
 
-SPECIFIC EXAMPLES:
-• If mark scheme says "walls are one cell thick" and student says "walls are 1 cell thick" - this is EQUIVALENT and gets the MARK
-• If mark scheme says "walls are thin OR walls are one cell thick" and student says "walls are thin" - this is CORRECT and gets the MARK
-• If mark scheme says "flexible membrane allows squeezing through capillaries" and student says "flexible so it can squeeze through small spaces" - this is EQUIVALENT and gets the MARK
-• If mark scheme says "biconcave shape increases surface area" and student says "concave shape gives more surface area" - this is EQUIVALENT and gets the MARK
-• If mark scheme says "no nucleus allows more space for haemoglobin" and student says "no nucleus so more room for haemoglobin" - this is EQUIVALENT and gets the MARK
-• If mark scheme says "3 stages of respiration" and student says "three stages of respiration" - this is EQUIVALENT and gets the MARK
-• If mark scheme says "2 ATP molecules" and student says "two ATP molecules" - this is EQUIVALENT and gets the MARK
-• If student paraphrases "large surface area" as "big surface area" - this is EQUIVALENT and gets the MARK
-• If student says "it helps with gas exchange" when mark scheme says "increases gas exchange" - this is EQUIVALENT and gets the MARK
-• If mark scheme says "increases surface area" and student says "change size" - this is TOO VAGUE and gets NO MARK
-• If mark scheme says "increases surface area" and student says "makes it bigger" - this is EQUIVALENT and gets the MARK
-• If mark scheme says "decreases diffusion distance" and student says "change distance" - this is TOO VAGUE and gets NO MARK
+RULE: If student's answer CONTAINS the mark scheme phrase → AWARD MARK AND USE GREEN HIGHLIGHT
+- Student can add adjectives like "very", "extremely", "really" → STILL CORRECT, GREEN HIGHLIGHT
+- Student can add parentheses (like this) or extra context → STILL CORRECT, GREEN HIGHLIGHT
+- Text in parentheses IS PART OF THE ANSWER - count it!
+- Student can combine multiple correct phrases → STILL CORRECT, GREEN HIGHLIGHT
 
-NO CONNECTING DOTS: Do NOT award marks by connecting separate parts of an answer to form a complete point
-SPECIFIC TERMS REQUIRED: If a mark scheme requires specific terms (e.g., "flexible membrane"), the student must use those exact terms or clear synonyms
-NO INFERENCE: Do not award marks for what the student "probably meant" - only award for what they actually wrote
-CHAINS OF REASONING: Award marks only when reasoning is complete and matches the scheme
+CRITICAL: "very thin walls (one cell thick)" contains:
+1. "walls are thin" ✓ (they said "very thin walls")  
+2. "one cell thick" ✓ (they said it in parentheses)
+Both parts are present! This is GREEN, not amber!
 
-HIGHLIGHTING REQUIREMENTS:
-• Find specific words/phrases in the student's answer that match mark scheme points
-• Use "success" for correct answers that earn marks
-• Use "warning" for partially correct answers that need improvement
-• Use "error" for incorrect or missing key terms
-• Highlight EXACT text from the student's answer (not paraphrased)
-• Provide brief tooltip explanations for each highlight
+MORE EXAMPLES:
+✓ "very thin walls (one cell thick)" → GREEN entire phrase (both parts correct)
+✓ "thin walls one cell thick" → GREEN (correct)
+✓ "extremely thin walls which are one cell thick" → GREEN (correct)
+✓ "walls are very thin" → GREEN (correct)
+✓ "the walls are 1 cell thick" → GREEN (correct)
 
-GRANULAR HIGHLIGHTING RULES:
-• HIGHLIGHT EACH PART SEPARATELY: If a student writes "no nucleus so it can squeeze", highlight "no nucleus" as success (green) and "so it can squeeze" as error (red)
-• CORRECT STATEMENT + WRONG REASON: Award mark for correct statement, but highlight the wrong reason as error
-• MIXED SENTENCES: Break down sentences into correct and incorrect parts for separate highlighting
-• PRECISE WORD MATCHING: Only highlight words that exactly match the mark scheme requirements
-• NO BLANKET HIGHLIGHTING: Don't highlight entire sentences as one color - be specific about what's right and wrong
+⚠️ MIXED CORRECT/INCORRECT - HIGHLIGHT SEPARATELY:
+"very thin walls (two cells thick)" when MS says "one cell thick"
+→ "very thin walls" = GREEN (matches "walls are thin") 
+→ "(two cells thick)" = RED (wrong number - should be one)
+→ Award mark for "very thin walls" but note the factual error
 
-FEEDBACK REQUIREMENTS:
-• Make ALL feedback actionable with specific bullet points
-• Focus on WHAT to improve and HOW to improve it
-• Give concrete examples of better answers
-• Highlight exact text from student's answer
+"large surface area for steep gradient" when MS says "ignore steep gradient"
+→ "large surface area" = GREEN (correct)
+→ "steep gradient" = RED (explicitly ignored in MS)
+
+ONLY fully reject if:
+- Student says "alveoli are thin" (mark scheme says "ignore alveoli are thin")
+- Student says "thin cell walls" (mark scheme says "do not accept thin cell walls")
+- Student says something completely different
+
+Pay attention: "walls are thin" ≠ "alveoli are thin" (different subjects!)
+
+You are a generous examiner. If the student shows understanding, award the mark.
+
+✅ WHEN TO AWARD MARKS (BE GENEROUS):
+• Student writes MORE than required → AWARD MARK if mark scheme point is included
+  Example: MS says "one cell thick", student says "thin walls (one cell thick)" → FULL MARK ✓
+• Student uses synonyms of SAME SPECIFICITY → AWARD MARK
+  Example: MS says "large surface area", student says "big surface area" → FULL MARK ✓
+  Example: MS says "increases", student says "enhances/boosts/improves/maximizes" → FULL MARK ✓
+  Example: MS says "decreases", student says "reduces/lowers/minimizes" → FULL MARK ✓
+• Student uses numbers differently → AWARD MARK if same value
+  Example: MS says "one cell", student says "1 cell" → FULL MARK ✓
+• Student adds extra detail → AWARD MARK if core point is present
+  Example: MS says "thin walls", student says "very thin walls made of one cell" → FULL MARK ✓
+
+🚨 CRITICAL: AWARD MARKS FOR EACH CORRECT PART SEPARATELY!
+If student gives 4 answers and 3 are correct but 1 is wrong:
+→ Award marks for the 3 correct points (don't penalize them for the wrong one!)
+→ Each mark scheme point is evaluated independently
+→ Correct answers still earn marks even if other parts are wrong
+
+Example: Mark scheme has 3 points (1 mark each), student provides 3 features:
+- "large surface area" (correct) → 1 mark ✓
+- "very thin walls" (correct) → 1 mark ✓  
+- "thick membrane" (wrong) → 0 marks ✗
+Total: 2/3 marks (the 2 correct ones still count!)
+
+⚠️ MAINTAIN PRECISION FOR DIRECTIONAL/SPECIFIC TERMS:
+• If MS says "increases" → student MUST use directional synonym (increases/enhances/boosts/improves/maximizes)
+  ❌ "helps with" is TOO VAGUE (doesn't specify increase/decrease) → NO MARK
+  ❌ "affects" is TOO VAGUE (doesn't specify direction) → NO MARK
+• If MS says "decreases" → student MUST use directional synonym (decreases/reduces/lowers/minimizes)
+  ❌ "changes" is TOO VAGUE → NO MARK
+• If MS says "prevents" → student MUST use precise term (prevents/stops/blocks)
+  ❌ "helps" is TOO VAGUE → NO MARK
+
+⚠️ WHEN TO USE WARNING (AMBER) HIGHLIGHTS:
+• Student is CLOSE but missing a small detail → USE WARNING
+  Example: MS says "increases surface area for gas exchange", student says "increases surface area" → WARNING (close, needs purpose)
+• Student uses slightly vague language but concept is clear → USE WARNING
+  Example: MS says "biconcave shape", student says "curved shape" → WARNING (nearly right, be more specific)
+• Student has right idea but imprecise wording → USE WARNING
+  Example: MS says "no nucleus for more haemoglobin", student says "no nucleus for oxygen" → WARNING (concept right, wording imprecise)
+
+❌ WHEN TO REJECT (ONLY STRICT IN THESE CASES):
+• Mark scheme explicitly says "DO NOT ACCEPT [phrase]" → DO NOT AWARD
+  Example: If MS says "do not accept thin cell walls" and student says "thin cell walls" → NO MARK
+• Mark scheme explicitly says "IGNORE [phrase]" → DO NOT AWARD  
+  Example: If MS says "ignore alveoli are thin" and student says "alveoli are thin" → NO MARK
+• Student's answer is completely wrong or contradicts the science
+• Student's answer is so vague it could apply to anything (e.g., "it's good" or "it helps")
+• Student didn't mention the key concept at all
+
+📋 MARK SCHEME INSTRUCTIONS - FOLLOW EXACTLY:
+• "DO NOT ACCEPT [phrase]" → Reject this EXACT phrase strictly, even if similar to mark scheme
+  Example: MS point is "walls are thin" but says "do not accept thin cell walls" 
+  → "walls are thin" ✓ CORRECT | "thin cell walls" ✗ WRONG (explicitly forbidden)
+  
+• "IGNORE [phrase]" → Do not award marks for this EXACT phrase
+  Example: MS point is "walls are thin" but says "ignore alveoli are thin"
+  → "walls are thin" ✓ CORRECT | "alveoli are thin" ✗ WRONG (explicitly ignored)
+  The distinction matters - "walls" vs "alveoli" are different!
+  
+• "ALLOW [phrase]" → Accept these alternatives as correct
+  Example: MS says "allow many capillaries" → "many capillaries" ✓ CORRECT
+  
+• If no special instruction → BE GENEROUS and accept reasonable equivalents
+
+🔍 PAY ATTENTION TO EXACT WORDING IN IGNORE/DO NOT ACCEPT RULES:
+The forbidden phrases are usually SLIGHTLY DIFFERENT from the correct answers:
+- "walls are thin" (correct) vs "alveoli are thin" (ignore) - different subject!
+- "walls are thin" (correct) vs "thin cell walls" (do not accept) - different word order!
+Read these rules carefully and check the EXACT phrase the student used.
+
+💡 EXAMPLES OF GENEROUS MARKING WITH IGNORE/DO NOT ACCEPT RULES:
+Real Mark Scheme Example: "walls are thin OR walls are one cell thick" but "ignore alveoli are thin" and "do not accept thin cell walls"
+✓ Student: "walls are thin" → FULL MARK (matches MS exactly)
+✓ Student: "walls are one cell thick" → FULL MARK (matches MS exactly)
+✓ Student: "very thin walls (one cell thick)" → FULL MARK (contains MS point + extra words)
+✓ Student: "thin walls one cell thick" → FULL MARK (contains MS point)
+✓ Student: "walls are 1 cell thick" → FULL MARK (number format equivalent)
+✓ Student: "the walls are very thin" → FULL MARK (contains "walls are thin")
+❌ Student: "alveoli are thin" → NO MARK (explicitly ignored in MS)
+❌ Student: "alveoli are one cell thick" → NO MARK (explicitly ignored in MS)
+❌ Student: "thin cell walls" → NO MARK (explicitly do not accept in MS)
+
+Other Examples:
+✓ MS: "large surface area" | Student: "very large surface area" → FULL MARK
+✓ MS: "large surface area" | Student: "massive surface area" → FULL MARK (synonym)
+✓ MS: "increases gas exchange" | Student: "enhances gas exchange" → FULL MARK (directional synonym)
+✓ MS: "no nucleus" | Student: "they have no nucleus at all" → FULL MARK (contains the point)
+⚠️ MS: "increases surface area for absorption" | Student: "increases surface area" → WARNING (has direction, missing purpose)
+⚠️ MS: "thin walls for short diffusion distance" | Student: "thin walls" → WARNING (correct but incomplete)
+⚠️ MS: "increases gas exchange" | Student: "helps with gas exchange" → WARNING or NO MARK (too vague, no direction)
+❌ MS: "DO NOT ACCEPT: alveoli are thin" | Student: "alveoli are thin" → NO MARK (explicitly forbidden)
+❌ MS: "increases surface area" | Student: "changes surface area" → NO MARK (no direction)
+❌ MS: "specific enzymes break down substrate" | Student: "stuff happens" → NO MARK (too vague)
+
+🎨 HIGHLIGHTING INSTRUCTIONS - FOLLOW THIS EXACTLY:
+
+⚠️ CRITICAL: SEPARATE CORRECT AND INCORRECT PARTS!
+Students may write correct content RIGHT NEXT TO incorrect content. You MUST highlight them separately:
+
+Example: "very thin walls (two cells thick)"
+Mark Scheme: "walls are thin OR walls are one cell thick"
+→ Highlight "very thin walls" as GREEN (correct - matches "walls are thin")
+→ Highlight "two cells thick" as RED (incorrect - should be "one cell thick")
+→ Award mark for "very thin walls" but note the error in parentheses
+
+Example: "large surface area for diffusion"
+Mark Scheme: "large surface area" (and mark scheme says "ignore references to diffusion")
+→ Highlight "large surface area" as GREEN (correct)
+→ Highlight "for diffusion" as AMBER or ignore (not required, might be ignored)
+
+• SUCCESS (green): Use when student's answer CONTAINS the mark scheme point
+  ✓ "very thin walls (one cell thick)" → GREEN entire phrase (both parts correct)
+  ✓ "very thin walls" → GREEN (correct, matches "walls are thin")
+  ✓ "large surface area" → GREEN (matches mark scheme)
+  ✓ "dense network of capillaries" → GREEN (matches "capillary network")
+  Rule: If the mark scheme point is present → GREEN
+
+• WARNING (amber): Use when student is close but MISSING something OR slightly wrong
+  ⚠️ "thin walls" alone when MS says "walls are thin OR walls are one cell thick" → AMBER (incomplete)
+  ⚠️ "large surface" without "area" → AMBER (missing keyword)
+  ⚠️ "capillaries" without "network" or "blood supply" → AMBER (incomplete)
+
+• ERROR (red): Use for wrong answers or forbidden phrases - HIGHLIGHT SEPARATELY!
+  ❌ "two cells thick" when MS says "one cell thick" → RED (factually wrong)
+  ❌ "alveoli are thin" when MS says "ignore alveoli are thin" → RED (forbidden)
+  ❌ "thin cell walls" when MS says "do not accept thin cell walls" → RED (forbidden)
+
+🚨 YOU MUST ACTIVELY FIND AND HIGHLIGHT ERRORS - NOT JUST CORRECT ANSWERS!
+Scan the entire student answer and highlight:
+1. CORRECT statements → GREEN
+2. FACTUALLY WRONG statements → RED (even if not in mark scheme, flag obvious errors)
+3. CLOSE but incomplete → AMBER
+
+Example: Student writes "large surface area, thin walls, thick membrane"
+Mark Scheme: "large surface area, thin walls, many capillaries"
+→ "large surface area" = GREEN ✓
+→ "thin walls" = GREEN ✓
+→ "thick membrane" = RED ✗ (not in mark scheme, wrong answer)
+Award 2/3 marks
+
+🚨 MIXED ANSWERS - BREAK THEM DOWN:
+"very thin walls (two cells thick)" = "very thin walls" (GREEN) + "(two cells thick)" (RED)
+"large surface area and steep gradient" where "ignore steep gradient" = "large surface area" (GREEN) + "steep gradient" (RED)
+
+📝 FEEDBACK STYLE:
+• Be encouraging and supportive
+• Focus on what they did well first
+• For warnings: "You're close! Just add..." or "Nearly there, but specify..."
+• For errors: "This point is missing..." or "Consider mentioning..."
+
+🚨🚨🚨 FINAL CHECK BEFORE YOU RETURN YOUR ANSWER:
+
+1. Did you highlight ALL correct mark scheme points as GREEN?
+2. Did you actively FIND AND HIGHLIGHT factually wrong statements as RED?
+   → If student says "thick membrane" when nothing in MS mentions this → RED
+   → If student says "two cells thick" when MS says "one" → RED
+3. Did you check parentheses content? It might be correct OR wrong!
+   → "very thin walls (one cell thick)" → Both GREEN
+   → "very thin walls (two cells thick)" → GREEN + RED separately
+4. If student gave multiple answers, did you evaluate EACH one?
+   → Correct ones get marks, wrong ones get 0 but don't penalize correct ones
 
 Return JSON: {
   "score": number, 
@@ -229,17 +372,32 @@ Return JSON: {
     "improvements": ["actionable steps to improve"],
     "missingPoints": ["specific mark scheme points missed"]
   }, 
-  "detailedFeedback": "concise actionable feedback with bullet points",
+  "detailedFeedback": "encouraging, actionable feedback with bullet points",
   "highlights": [{"text": "exact text from student answer", "type": "success|warning|error", "tooltip": "brief explanation"}]
 }`
         },
         {
           role: "user",
-          content: `Question: ${processedQuestion}\n\nMark Scheme (use ONLY this for scoring): ${processedMarkScheme}\n\nStudent Answer: ${processedStudentAnswer}\n\nMaximum Marks: ${maxMarks}\n\nIMPORTANT: Base your evaluation SOLELY on the mark scheme provided. Do not use any external knowledge or assumptions.`
+          content: `Question: ${processedQuestion}
+
+Mark Scheme (use ONLY this for scoring): ${processedMarkScheme}
+
+Student Answer: ${processedStudentAnswer}
+
+Maximum Marks: ${maxMarks}
+
+CRITICAL REMINDERS:
+1. Text in parentheses IS PART OF THE ANSWER - count it and check if it's correct!
+2. "very thin walls (one cell thick)" → GREEN (both parts correct)
+3. "very thin walls (two cells thick)" → "very thin walls" GREEN + "(two cells thick)" RED (separate highlights!)
+4. If student mixes correct and incorrect content → HIGHLIGHT EACH PART SEPARATELY
+5. Award marks for correct parts even if other parts are wrong
+
+Base your evaluation SOLELY on the mark scheme provided.`
         }
       ],
-      max_tokens: 800,
-      temperature: 0.2
+      max_tokens: 1200,
+      temperature: 0.4
     });
 
     const analysisContent = analysisResponse.choices[0]?.message?.content;

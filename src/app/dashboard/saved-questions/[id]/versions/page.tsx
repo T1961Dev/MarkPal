@@ -14,10 +14,9 @@ import {
   Edit3, 
   RotateCcw,
   Clock,
-  ArrowLeft,
-  Crown
+  ArrowLeft
 } from "lucide-react"
-import { SavedQuestion, getSavedQuestionById, getSavedQuestions, getUser } from "@/lib/supabase"
+import { SavedQuestion, getSavedQuestionById, getSavedQuestions } from "@/lib/supabase"
 
 export default function SavedQuestionVersionsPage() {
   const { user } = useAuth()
@@ -26,26 +25,12 @@ export default function SavedQuestionVersionsPage() {
   const [question, setQuestion] = useState<SavedQuestion | null>(null)
   const [loading, setLoading] = useState(true)
   const [allVersions, setAllVersions] = useState<SavedQuestion[]>([])
-  const [userData, setUserData] = useState<{ tier: string } | null>(null)
 
   useEffect(() => {
     if (user && params.id) {
       loadQuestion()
-      loadUserData()
     }
   }, [user, params.id])
-
-  const loadUserData = async () => {
-    if (!user) return
-    try {
-      const data = await getUser(user.id)
-      setUserData(data)
-    } catch (error) {
-      console.error('Error loading user data:', error)
-    }
-  }
-
-  const isProPlus = userData?.tier === 'pro+'
 
   const loadQuestion = async () => {
     if (!user || !params.id) return
@@ -219,6 +204,16 @@ export default function SavedQuestionVersionsPage() {
                   <Badge variant={getScoreBadgeVariant(version.score, version.max_score)}>
                     {version.score}/{version.max_score}
                   </Badge>
+                  {version.subject && (
+                    <Badge variant="outline" className="text-xs">
+                      {version.subject}
+                    </Badge>
+                  )}
+                  {version.difficulty && (
+                    <Badge variant="outline" className="text-xs">
+                      {version.difficulty}
+                    </Badge>
+                  )}
                 </div>
               </CardHeader>
               
@@ -247,15 +242,10 @@ export default function SavedQuestionVersionsPage() {
                 <div className="flex gap-2 mt-4">
                   <Button
                     size="sm"
-                    onClick={isProPlus ? () => handleImprove(version) : undefined}
-                    disabled={!isProPlus}
-                    className={`w-full ${!isProPlus ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    onClick={() => handleImprove(version)}
+                    className="w-full"
                   >
-                    {isProPlus ? (
-                      <Edit3 className="h-3 w-3 mr-1" />
-                    ) : (
-                      <Crown className="h-3 w-3 mr-1" />
-                    )}
+                    <Edit3 className="h-3 w-3 mr-1" />
                     Improve This Version
                   </Button>
                 </div>

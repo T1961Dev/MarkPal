@@ -21,6 +21,7 @@ interface SaveQuestionDialogProps {
   onSave: (name: string) => void
   onDiscard: () => void
   isLoading?: boolean
+  defaultName?: string
 }
 
 export function SaveQuestionDialog({ 
@@ -28,9 +29,17 @@ export function SaveQuestionDialog({
   onClose, 
   onSave, 
   onDiscard, 
-  isLoading = false 
+  isLoading = false,
+  defaultName = "" 
 }: SaveQuestionDialogProps) {
-  const [questionName, setQuestionName] = useState("")
+  const [questionName, setQuestionName] = useState(defaultName)
+  
+  // Update question name when defaultName changes (e.g., when dialog opens with a new default)
+  React.useEffect(() => {
+    if (isOpen && defaultName) {
+      setQuestionName(defaultName)
+    }
+  }, [isOpen, defaultName])
 
   const handleSave = () => {
     if (questionName.trim()) {

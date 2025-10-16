@@ -87,11 +87,26 @@ export default async function Success({
                 </p>
               </div>
               <Link
-                href="/"
+                href="/dashboard?refresh=true"
                 className="inline-flex items-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
               >
                 Continue to App
               </Link>
+              <script dangerouslySetInnerHTML={{ __html: `
+                // Trigger data refresh event for instant update
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('subscriptionUpdated'));
+                  // Also clear any cached user data
+                  try {
+                    const keys = Object.keys(localStorage);
+                    keys.forEach(key => {
+                      if (key.startsWith('markpal_user_data_')) {
+                        localStorage.removeItem(key);
+                      }
+                    });
+                  } catch (e) {}
+                }
+              ` }} />
             </div>
           </div>
         </div>

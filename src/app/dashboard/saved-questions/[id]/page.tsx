@@ -20,7 +20,9 @@ import {
   FileText,
   Award,
   Clock,
-  TrendingUp
+  TrendingUp,
+  Edit3,
+  RotateCcw
 } from "lucide-react"
 import { SavedQuestion, getSavedQuestionById, getSavedQuestions } from "@/lib/supabase"
 import { AnswerHighlighter } from "@/components/answer-highlighter"
@@ -74,6 +76,30 @@ export default function SavedQuestionPage() {
 
   const handleViewVersions = () => {
     router.push(`/dashboard/saved-questions/${params.id}/versions`)
+  }
+
+  const handleImprove = () => {
+    if (!question) return
+    // Navigate to practice page with the question data pre-filled for improvement
+    const searchParams = new URLSearchParams({
+      question: question.question,
+      markScheme: question.mark_scheme,
+      maxScore: question.max_score.toString(),
+      studentAnswer: question.student_answer,
+      versionId: question.id
+    })
+    router.push(`/dashboard/practice?${searchParams.toString()}`)
+  }
+
+  const handleStartFresh = () => {
+    if (!question) return
+    // Navigate to practice page with fresh start (no pre-filled answer)
+    const searchParams = new URLSearchParams({
+      question: question.question,
+      markScheme: question.mark_scheme,
+      maxScore: question.max_score.toString()
+    })
+    router.push(`/dashboard/practice?${searchParams.toString()}`)
   }
 
 
@@ -141,6 +167,21 @@ export default function SavedQuestionPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button 
+              variant="default"
+              onClick={handleImprove}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Edit3 className="h-4 w-4 mr-2" />
+              Improve This Answer
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleStartFresh}
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Try Fresh
+            </Button>
             <Button 
               variant="outline" 
               onClick={handleViewVersions}

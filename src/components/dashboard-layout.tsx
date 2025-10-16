@@ -56,7 +56,7 @@ interface DashboardLayoutProps {
 interface NavigationItem {
   title: string
   url: string
-  icon: React.ComponentType<{ className?: string }>
+  icon: any
 }
 
 const navigationItems: NavigationItem[] = [
@@ -175,7 +175,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && user && session) {
-        loadUserData() // Normal refresh when page becomes visible
+        loadUserData()
       }
     }
 

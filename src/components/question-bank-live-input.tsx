@@ -16,6 +16,8 @@ interface QuestionBankLiveInputProps {
     tooltip?: string;
   }>
   isLoading: boolean
+  score?: number | null
+  maxScore?: number
   placeholder?: string
   onSave?: () => void
   isSaving?: boolean
@@ -35,20 +37,33 @@ export function QuestionBankLiveInput({
   onAnalysis,
   highlights,
   isLoading,
+  score = null,
+  maxScore = 10,
   placeholder = "Write your improved answer here...",
   onSave,
   isSaving = false
 }: QuestionBankLiveInputProps) {
   const [showHighlights, setShowHighlights] = useState(true)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const lastAnalyzedValue = useRef<string>('')
 
-  // Debounced analysis
+  // Debounced analysis - only run when value actually changes
   useEffect(() => {
-    if (!value.trim()) return
+    if (!value || !value.trim()) {
+      lastAnalyzedValue.current = ''
+      return
+    }
+
+    // Don't run if value hasn't changed
+    if (value === lastAnalyzedValue.current) return
 
     const timeoutId = setTimeout(() => {
-      onAnalysis(value)
-    }, 1500) // 1.5 second delay
+      // Double check value hasn't been analyzed
+      if (value !== lastAnalyzedValue.current) {
+        lastAnalyzedValue.current = value
+        onAnalysis(value)
+      }
+    }, 3000) // 3 second delay
 
     return () => clearTimeout(timeoutId)
   }, [value, onAnalysis])
@@ -56,19 +71,27 @@ export function QuestionBankLiveInput({
   // Get highlight stats
   const successHighlights = highlights?.filter(h => h.type === "success") || []
   const warningHighlights = highlights?.filter(h => h.type === "warning") || []
+  const errorHighlights = highlights?.filter(h => h.type === "error") || []
   const missingHighlights = highlights?.filter(h => h.type === "missing") || []
 
   return (
     <div className="space-y-4">
       {/* Status Bar */}
-      <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+            <Sparkles className="h-5 w-5 text-blue-600" />
+            <span className="text-base font-semibold text-blue-700 dark:text-blue-300">
               Live Analysis
             </span>
           </div>
+          
+          {/* Live Score Display */}
+          {score !== null && score !== undefined ? (
+            <Badge variant="outline" className="text-lg px-4 py-2 bg-white border-2 border-primary font-bold">
+              Score: {score}/{maxScore}
+            </Badge>
+          ) : null}
           
           {isLoading ? (
             <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-700 border-yellow-300">
@@ -82,7 +105,7 @@ export function QuestionBankLiveInput({
               {successHighlights.length > 0 && (
                 <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-300">
                   <CheckCircle className="w-3 h-3 mr-1" />
-                  {successHighlights.length} matches
+                  {successHighlights.length} correct
                 </Badge>
               )}
               {warningHighlights.length > 0 && (
@@ -91,8 +114,14 @@ export function QuestionBankLiveInput({
                   {warningHighlights.length} partial
                 </Badge>
               )}
+              {errorHighlights.length > 0 && (
+                <Badge variant="outline" className="text-xs bg-red-100 text-red-700 border-red-300">
+                  <XCircle className="w-3 h-3 mr-1" />
+                  {errorHighlights.length} incorrect
+                </Badge>
+              )}
             </div>
-          ) : value.trim() ? (
+          ) : (value && value.trim()) ? (
             <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300">
               <XCircle className="w-3 h-3 mr-1" />
               No matches yet
@@ -111,13 +140,13 @@ export function QuestionBankLiveInput({
           </Button>
           {onSave && (
             <Button
-              size="sm"
+              size="default"
               onClick={onSave}
-              disabled={isSaving || !value.trim()}
-              className="text-xs"
+              disabled={isSaving || !value || !value.trim() || score === null}
+              className="bg-primary hover:bg-primary/90"
             >
-              <Save className="w-3 h-3 mr-1" />
-              {isSaving ? "Saving..." : "Save"}
+              <Save className="w-4 h-4 mr-2" />
+              {isSaving ? "Saving..." : "Save as New Version"}
             </Button>
           )}
         </div>
@@ -187,6 +216,30 @@ export function QuestionBankLiveInput({
             </div>
           )}
           
+          {/* Errors/Incorrect */}
+          {errorHighlights.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <XCircle className="w-4 h-4 text-red-600" />
+                <span className="text-sm font-medium text-red-700 dark:text-red-400">
+                  Incorrect statements ({errorHighlights.length})
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {errorHighlights.slice(0, 3).map((highlight, index) => (
+                  <Badge key={index} variant="secondary" className="text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200">
+                    "{highlight.text}" {highlight.tooltip && `- ${highlight.tooltip}`}
+                  </Badge>
+                ))}
+                {errorHighlights.length > 3 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{errorHighlights.length - 3} more
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
+          
           {/* Missing Points */}
           {missingHighlights.length > 0 && (
             <div className="space-y-2">
@@ -205,7 +258,7 @@ export function QuestionBankLiveInput({
       )}
       
       {/* Help Text */}
-      {!value.trim() && (
+      {(!value || !value.trim()) && (
         <div className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">
           Start typing your improved answer above. I'll analyze it in real-time!
         </div>
