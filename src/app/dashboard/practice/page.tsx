@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { DashboardLayout } from "@/components/dashboard-layout"
@@ -59,7 +59,7 @@ interface FeedbackResult {
   detailedFeedback?: string
 }
 
-export default function Practice() {
+function PracticeContent() {
   const { user, session } = useAuth()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -1133,5 +1133,13 @@ export default function Practice() {
         </div>
       </div>
     </DashboardLayout>
+  )
+}
+
+export default function Practice() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PracticeContent />
+    </Suspense>
   )
 }

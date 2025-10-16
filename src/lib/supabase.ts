@@ -138,7 +138,7 @@ export const saveQuestion = async (questionData: Omit<SavedQuestion, 'id' | 'cre
 }
 
 // Cache for saved questions
-const savedQuestionsCache = new Map<string, { data: any[], timestamp: number }>()
+const savedQuestionsCache = new Map<string, { data: SavedQuestion[], timestamp: number }>()
 const SAVED_QUESTIONS_CACHE_DURATION = 5000 // 5 seconds - short cache for quick updates
 
 export const getSavedQuestions = async (userId: string) => {
@@ -530,7 +530,7 @@ export const createUser = async (userId: string, accessToken?: string, fullName?
   } catch (error) {
     console.error('Error creating user:', error)
     // If the has_seen_welcome column doesn't exist, try without it
-    if ((error as any)?.message?.includes('has_seen_welcome')) {
+    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' && error.message.includes('has_seen_welcome')) {
       console.log('has_seen_welcome column not found, creating user without it')
       const { data, error: retryError } = await client
         .from('users')
@@ -751,8 +751,7 @@ export const getUserStats = async (userId: string, accessToken?: string, timePer
     const startDateStr = startDate.toISOString()
     
     // Get user data and saved questions in parallel
-    const [userData, { count: savedQuestionsCount }, { data: savedQuestions }] = await Promise.all([
-      getUser(userId, accessToken),
+    const [{ count: savedQuestionsCount }, { data: savedQuestions }] = await Promise.all([
       client
         .from('saved_questions')
         .select('*', { count: 'exact', head: true })
@@ -906,7 +905,7 @@ export const markWelcomeSeen = async (userId: string, accessToken?: string) => {
   } catch (error) {
     console.error('Error marking welcome as seen:', error)
     // If the has_seen_welcome column doesn't exist, just return the current user data
-    if ((error as any)?.message?.includes('has_seen_welcome')) {
+    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' && error.message.includes('has_seen_welcome')) {
       console.log('has_seen_welcome column not found, skipping update')
       const { data, error: fetchError } = await client
         .from('users')
@@ -922,7 +921,7 @@ export const markWelcomeSeen = async (userId: string, accessToken?: string) => {
 }
 
 // Optimized version - takes user data directly to avoid extra query
-export const checkAndResetUserQuestionsOptimized = async (user: User, client: any): Promise<User> => {
+export const checkAndResetUserQuestionsOptimized = async (user: User, client: ReturnType<typeof createServerSupabaseClient>): Promise<User> => {
   // Check if reset date has passed (only if questions_reset_date exists)
   if (user.questions_reset_date) {
     const resetDate = new Date(user.questions_reset_date)

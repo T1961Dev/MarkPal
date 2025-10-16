@@ -424,6 +424,7 @@ Base your evaluation SOLELY on the mark scheme provided.`
         detailedFeedback: analysisContent,
         highlights: []
       };
+      console.error('JSON parsing error:', parseError);
     }
 
                // Decrement questions left and update streak for the user

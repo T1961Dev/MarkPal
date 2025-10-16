@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { GraduationCap, Bookmark, BookOpen, Upload, Lock, Crown } from "lucide-react"
+import { Bookmark, BookOpen, Upload, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
 import { AuthDialog } from "./auth-dialog"
@@ -11,6 +11,7 @@ import { QuestionsProgress } from "./questions-progress"
 import { PricingPopup } from "./pricing-popup"
 import { getUser, User } from "@/lib/supabase"
 import Link from "next/link"
+import Image from "next/image"
 import {
   Tooltip,
   TooltipContent,
@@ -29,7 +30,7 @@ export function Navbar() {
     if (user) {
       loadUserData()
     }
-  }, [user])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUserData = async () => {
     if (!user) return
@@ -56,10 +57,12 @@ export function Navbar() {
               window.location.href = '/'
             }}
           >
-            <img 
+            <Image 
               src="/pics/logo.png" 
               alt="Mark Pal Logo" 
-              className="h-10 w-10 object-contain"
+              width={40}
+              height={40}
+              className="object-contain"
             />
           </Link>
 

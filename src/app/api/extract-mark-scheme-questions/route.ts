@@ -79,7 +79,7 @@ Mark scheme format requirements:
     try {
       extractedQuestions = JSON.parse(responseText);
     } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', responseText);
+      console.error('Failed to parse OpenAI response:', parseError, responseText);
       throw new Error('Failed to parse mark scheme question extraction results');
     }
 
@@ -89,10 +89,10 @@ Mark scheme format requirements:
     }
 
     // Clean up and validate each question
-    const cleanedQuestions = extractedQuestions.map((q: any, index: number) => ({
+    const cleanedQuestions = extractedQuestions.map((q: { questionNumber?: string; questionText?: string; marks?: string; maxMarks?: string; markScheme?: string }, index: number) => ({
       questionNumber: q.questionNumber || (index + 1).toString(),
       questionText: q.questionText?.trim() || '',
-      maxMarks: parseInt(q.maxMarks) || 1,
+      maxMarks: parseInt(q.maxMarks || q.marks || '1') || 1,
       markScheme: q.markScheme?.trim() || ''
     })).filter(q => q.questionText.length > 10 && q.markScheme.length > 20); // Filter out very short questions
 

@@ -11,7 +11,6 @@ import {
   Target, 
   MessageCircle,
   Mail,
-  ExternalLink,
   CheckCircle,
   ArrowRight
 } from "lucide-react"

@@ -60,7 +60,7 @@ export function QuestionBankCard({ question, getDifficultyColor, getLevelColor, 
     } else {
       setLoading(false)
     }
-  }, [user, question.id, propAttemptStatus])
+  }, [user, question.id, propAttemptStatus]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAttemptStatus = async () => {
     try {

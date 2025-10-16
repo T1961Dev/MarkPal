@@ -17,39 +17,38 @@ import {
   Brain,
   CheckCircle,
   AlertCircle,
-  XCircle,
   Calendar,
   Star
 } from "lucide-react"
 import { getDashboardStats, DashboardStats } from "@/lib/supabase"
 
-interface AnalyticsData {
-  totalQuestions: number
-  averageScore: number
-  highScores: number
-  totalFeedback: number
-  subjectBreakdown: Array<{
-    subject: string
-    count: number
-    averageScore: number
-  }>
-  difficultyBreakdown: Array<{
-    difficulty: string
-    count: number
-    averageScore: number
-  }>
-  recentPerformance: Array<{
-    date: string
-    score: number
-    maxScore: number
-  }>
-  strengths: string[]
-  weaknesses: string[]
-  improvements: string[]
-}
+// interface AnalyticsData {
+//   totalQuestions: number
+//   averageScore: number
+//   highScores: number
+//   totalFeedback: number
+//   subjectBreakdown: Array<{
+//     subject: string
+//     count: number
+//     averageScore: number
+//   }>
+//   difficultyBreakdown: Array<{
+//     difficulty: string
+//     count: number
+//     averageScore: number
+//   }>
+//   recentPerformance: Array<{
+//     date: string
+//     score: number
+//     maxScore: number
+//   }>
+//   strengths: string[]
+//   weaknesses: string[]
+//   improvements: string[]
+// }
 
 export default function Analytics() {
-  const { user, session } = useAuth()
+  const { user } = useAuth()
   const [analyticsData, setAnalyticsData] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -57,7 +56,7 @@ export default function Analytics() {
     if (user) {
       fetchAnalytics()
     }
-  }, [user])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchAnalytics = async () => {
     try {

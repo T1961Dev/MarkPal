@@ -204,16 +204,6 @@ export default function SavedQuestionVersionsPage() {
                   <Badge variant={getScoreBadgeVariant(version.score, version.max_score)}>
                     {version.score}/{version.max_score}
                   </Badge>
-                  {version.subject && (
-                    <Badge variant="outline" className="text-xs">
-                      {version.subject}
-                    </Badge>
-                  )}
-                  {version.difficulty && (
-                    <Badge variant="outline" className="text-xs">
-                      {version.difficulty}
-                    </Badge>
-                  )}
                 </div>
               </CardHeader>
               

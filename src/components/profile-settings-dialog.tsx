@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2, User, Settings, Upload, Save } from "lucide-react"
+import Image from "next/image"
 
 interface ProfileSettingsDialogProps {
   isOpen: boolean
@@ -62,10 +63,12 @@ export function ProfileSettingsDialog({ isOpen, onClose }: ProfileSettingsDialog
               <div className="flex items-center gap-4">
                 <div className="h-20 w-20 rounded-full overflow-hidden bg-muted border border-border">
                   {user?.user_metadata?.avatar_url ? (
-                    <img
+                    <Image
                       src={user.user_metadata.avatar_url}
                       alt="Profile"
-                      className="h-full w-full object-cover"
+                      width={80}
+                      height={80}
+                      className="object-cover"
                     />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center">

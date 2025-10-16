@@ -8,7 +8,8 @@ import { createAdminSupabaseClient } from "@/lib/supabase";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Helper function to determine subject from filename or content
+// Helper function to determine subject from filename or content (currently unused)
+/*
 function determineSubject(filename: string, content: string): string {
   const filenameLower = filename.toLowerCase();
   const contentLower = content.toLowerCase();
@@ -35,6 +36,7 @@ function determineSubject(filename: string, content: string): string {
   
   return 'other';
 }
+*/
 
 export async function POST(req: NextRequest) {
   try {
@@ -74,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    const paperId = formData.get("paperId") as string;
+    // const _paperId = formData.get("paperId") as string; // Currently unused
 
     if (!file) {
       return NextResponse.json({ success: false, error: "No file provided" }, { status: 400 });
@@ -96,7 +98,7 @@ export async function POST(req: NextRequest) {
     // Ensure temp directory exists
     try {
       await fs.mkdir("C:/temp", { recursive: true });
-    } catch (error) {
+    } catch {
       // Directory might already exist, ignore error
     }
 
@@ -114,23 +116,29 @@ export async function POST(req: NextRequest) {
 
     try {
       // Parse the PDF using pdf2json
-      const pdfParser = new (PDFParser as any)(null, 1);
+      const pdfParser = new (PDFParser as unknown as new (options: unknown, max: number) => {
+        on: (event: string, callback: (data: unknown) => void) => void;
+        getRawTextContent: () => string;
+        parseBuffer: (buffer: Buffer) => void;
+        loadPDF: (filePath: string) => void;
+      })(null, 1);
       
       // Create a promise to handle the async PDF parsing
       const parsePromise = new Promise<string>((resolve, reject) => {
-        pdfParser.on('pdfParser_dataError', (errData: any) => {
-          console.error('PDF parsing error with pdf2json:', errData.parserError);
-          reject(new Error(`PDF parsing failed: ${errData.parserError}`));
+        pdfParser.on('pdfParser_dataError', (errData: unknown) => {
+          const error = errData as { parserError: string };
+          console.error('PDF parsing error with pdf2json:', error.parserError);
+          reject(new Error(`PDF parsing failed: ${error.parserError}`));
         });
 
         pdfParser.on('pdfParser_dataReady', () => {
           try {
-            const rawText = (pdfParser as any).getRawTextContent();
-            const pageCount = (pdfParser as any).getRawTextContent().split('\f').length;
+            const rawText = pdfParser.getRawTextContent();
+            const pageCount = pdfParser.getRawTextContent().split('\f').length;
             console.log('PDF parsed successfully with pdf2json, pages:', pageCount);
             console.log('Text length:', rawText.length);
             resolve(rawText);
-          } catch (error) {
+          } catch {
             reject(new Error('Failed to extract text from parsed PDF'));
           }
         });
@@ -232,7 +240,7 @@ Classify by type: essay (detailed analysis), short-answer (brief responses), mul
     if (!Array.isArray(extractedQuestions)) throw new Error("Invalid response format from OpenAI");
 
     const cleanedQuestions = extractedQuestions
-      .map((q: any, idx: number) => ({
+      .map((q: { id?: string; questionNumber?: string; text?: string; marks?: string; type?: string }, idx: number) => ({
         id: q.id || `question-${idx + 1}`,
         questionNumber: q.questionNumber || (idx + 1).toString(),
         text: q.text?.trim() || "",

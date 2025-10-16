@@ -3,11 +3,10 @@
 import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { 
   BookOpen, 
   Target, 
@@ -18,7 +17,7 @@ import {
   Calendar
 } from "lucide-react"
 import Link from "next/link"
-import { getUser, User, getUserStats, checkAndResetUserQuestions, markWelcomeSeen, getOptimisticUserData } from "@/lib/supabase"
+import { getUser, User, getUserStats, markWelcomeSeen, getOptimisticUserData } from "@/lib/supabase"
 import { PricingPopup } from "@/components/pricing-popup"
 import { WelcomePopup } from "@/components/welcome-popup"
 import { dataSync } from "@/lib/data-sync"
@@ -85,7 +84,7 @@ export default function Dashboard() {
       }
       
       // Retry logic for network errors
-      if (retryCount < 2 && (error as any)?.message?.includes('fetch')) {
+      if (retryCount < 2 && error instanceof Error && error.message?.includes('fetch')) {
         console.log(`Retrying data load (attempt ${retryCount + 1})`)
         setTimeout(() => {
           loadUserData(retryCount + 1)
@@ -110,7 +109,7 @@ export default function Dashboard() {
     setWelcomePopupOpen(false)
   }
 
-  const handleWelcomeUpgrade = (tier: 'basic' | 'pro' | 'pro+') => {
+  const handleWelcomeUpgrade = (_tier: 'basic' | 'pro' | 'pro+') => {
     // Close welcome popup and open pricing popup
     setWelcomePopupOpen(false)
     setPricingPopupOpen(true)
@@ -286,7 +285,7 @@ export default function Dashboard() {
               Showing stats for {getTimePeriodLabel(timePeriod).toLowerCase()}
             </p>
           </div>
-          <Tabs value={timePeriod} onValueChange={(value) => setTimePeriod(value as any)}>
+          <Tabs value={timePeriod} onValueChange={(value) => setTimePeriod(value as 'today' | 'week' | 'month' | 'alltime')}>
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="today" className="text-xs flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
@@ -422,10 +421,9 @@ export default function Dashboard() {
         currentTier={userData?.tier || 'free'}
       />
       
-      <WelcomePopup 
-        isOpen={welcomePopupOpen} 
+      <WelcomePopup
+        isOpen={welcomePopupOpen}
         onClose={handleWelcomeClose}
-        onUpgrade={handleWelcomeUpgrade}
       />
     </DashboardLayout>
   )

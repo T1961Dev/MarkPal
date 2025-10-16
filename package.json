@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "rm -rf .next && rm -rf node_modules/.cache && next build",
+    "build": "rimraf .next node_modules/.cache && next build",
     "start": "next start",
     "lint": "eslint"
   },
@@ -53,6 +53,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
+    "rimraf": "^6.0.1",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.7",
     "typescript": "^5"

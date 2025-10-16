@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -10,7 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/contexts/auth-context"
-import { User, Settings, LogOut, Bookmark } from "lucide-react"
+import { User, Settings, LogOut } from "lucide-react"
+import Image from "next/image"
 
 interface ProfileDropdownProps {
   onProfileClick: () => void
@@ -30,10 +30,12 @@ export function ProfileDropdown({ onProfileClick, onSettingsClick }: ProfileDrop
         <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
           <div className="h-10 w-10 rounded-full overflow-hidden bg-muted border border-border hover:bg-muted/80 transition-colors">
             {user?.user_metadata?.avatar_url ? (
-              <img
+              <Image
                 src={user.user_metadata.avatar_url}
                 alt="Profile"
-                className="h-full w-full object-cover"
+                width={40}
+                height={40}
+                className="object-cover"
               />
             ) : (
               <div className="h-full w-full flex items-center justify-center">

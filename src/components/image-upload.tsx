@@ -91,7 +91,7 @@ export function ImageUpload({
         container.removeEventListener('paste', handlePaste)
       }
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div ref={containerRef} className={`flex items-center justify-center gap-3 ${className}`}>

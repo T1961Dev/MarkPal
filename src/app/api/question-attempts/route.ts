@@ -3,8 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase';
 import { 
   createQuestionAttempt, 
   getQuestionAttempts, 
-  updateQuestionAttempt,
-  hasAttemptedQuestion 
+  updateQuestionAttempt
 } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {

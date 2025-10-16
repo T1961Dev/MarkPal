@@ -23,14 +23,6 @@ interface QuestionBankLiveInputProps {
   isSaving?: boolean
 }
 
-interface TextHighlight {
-  text: string
-  type: "success" | "warning" | "missing"
-  start: number
-  end: number
-  tooltip?: string
-}
-
 export function QuestionBankLiveInput({ 
   value, 
   onChange, 
@@ -180,7 +172,7 @@ export function QuestionBankLiveInput({
               <div className="flex flex-wrap gap-1">
                 {successHighlights.slice(0, 4).map((highlight, index) => (
                   <Badge key={index} variant="secondary" className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
-                    "{highlight.text}"
+                    &quot;{highlight.text}&quot;
                   </Badge>
                 ))}
                 {successHighlights.length > 4 && (
@@ -204,7 +196,7 @@ export function QuestionBankLiveInput({
               <div className="flex flex-wrap gap-1">
                 {warningHighlights.slice(0, 3).map((highlight, index) => (
                   <Badge key={index} variant="secondary" className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
-                    "{highlight.text}"
+                    &quot;{highlight.text}&quot;
                   </Badge>
                 ))}
                 {warningHighlights.length > 3 && (
@@ -228,7 +220,7 @@ export function QuestionBankLiveInput({
               <div className="flex flex-wrap gap-1">
                 {errorHighlights.slice(0, 3).map((highlight, index) => (
                   <Badge key={index} variant="secondary" className="text-xs bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200">
-                    "{highlight.text}" {highlight.tooltip && `- ${highlight.tooltip}`}
+                    &quot;{highlight.text}&quot; {highlight.tooltip && `- ${highlight.tooltip}`}
                   </Badge>
                 ))}
                 {errorHighlights.length > 3 && (
@@ -260,7 +252,7 @@ export function QuestionBankLiveInput({
       {/* Help Text */}
       {(!value || !value.trim()) && (
         <div className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">
-          Start typing your improved answer above. I'll analyze it in real-time!
+          Start typing your improved answer above. I&apos;ll analyze it in real-time!
         </div>
       )}
     </div>

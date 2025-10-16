@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -10,8 +10,6 @@ import {
   BookOpen, 
   Target,
   CheckCircle,
-  AlertCircle,
-  XCircle,
   Calendar
 } from "lucide-react"
 import { SavedQuestion, getSavedQuestionById } from "@/lib/supabase"
@@ -38,7 +36,7 @@ export function SavedQuestionDialog({
     if (isOpen && questionId && user) {
       loadQuestion()
     }
-  }, [isOpen, questionId, user])
+  }, [isOpen, questionId, user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadQuestion = async () => {
     if (!user || !questionId) return
@@ -65,32 +63,6 @@ export function SavedQuestionDialog({
       month: 'short',
       day: 'numeric'
     })
-  }
-
-  const getHighlightClass = (type: string) => {
-    switch (type) {
-      case "success":
-        return "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200"
-      case "warning":
-        return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200"
-      case "error":
-        return "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200"
-      default:
-        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
-    }
-  }
-
-  const getHighlightIcon = (type: string) => {
-    switch (type) {
-      case "success":
-        return <CheckCircle className="w-4 h-4" />
-      case "warning":
-        return <AlertCircle className="w-4 h-4" />
-      case "error":
-        return <XCircle className="w-4 h-4" />
-      default:
-        return null
-    }
   }
 
   const handleClose = () => {
@@ -172,7 +144,7 @@ export function SavedQuestionDialog({
                         </div>
                         {!markSchemeExpanded && (
                           <div className="text-xs text-muted-foreground">
-                            Click "Show More" to see the full mark scheme
+                            Click &quot;Show More&quot; to see the full mark scheme
                           </div>
                         )}
                       </div>
@@ -222,7 +194,7 @@ export function SavedQuestionDialog({
         ) : (
           <div className="text-center py-16">
             <h3 className="text-lg font-semibold mb-2">Question not found</h3>
-            <p className="text-muted-foreground">The question you're looking for doesn't exist or has been deleted.</p>
+            <p className="text-muted-foreground">The question you&apos;re looking for doesn&apos;t exist or has been deleted.</p>
           </div>
         )}
       </DialogContent>

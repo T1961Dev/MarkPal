@@ -79,7 +79,6 @@ export function DarkFeedbackResults({ result, onReset }: DarkFeedbackResultsProp
         
         <div className="rounded-xl bg-gray-50 p-6 border border-gray-200">
           <FeedbackHighlighter 
-            text={result.feedback} 
             highlights={result.highlights} 
           />
         </div>

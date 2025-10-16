@@ -22,7 +22,6 @@ interface MarkSchemeDialogProps {
 }
 
 export function MarkSchemeDialog({ 
-  questionNumber, 
   markScheme, 
   maxMarks, 
   children 
@@ -234,7 +233,7 @@ export function MarkSchemeDialog({
     return { points, extraInfo: allExtraInfo }
   }
 
-  const { points: markSchemePoints, extraInfo: allExtraInfo } = parseMarkScheme(markScheme)
+  const { points: markSchemePoints } = parseMarkScheme(markScheme)
   const actualQuestionNumber = extractQuestionNumber(markScheme)
 
   return (

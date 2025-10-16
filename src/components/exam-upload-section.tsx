@@ -4,12 +4,11 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Upload, Lock, FileText, Crown } from "lucide-react"
 import { ExamUploadFlow } from "@/components/exam-upload-flow"
 import { PricingPopup } from "@/components/pricing-popup"
 import { getUser, User } from "@/lib/supabase"
-import { ExtractedQuestion, PDFMetadata, LegacyExtractedQuestion } from "@/types/exam-types"
+import { ExtractedQuestion, PDFMetadata } from "@/types/exam-types"
 
 interface ExamUploadSectionProps {
   onQuestionsExtracted?: (questions: ExtractedQuestion[], fullText: string, metadata: PDFMetadata) => void
@@ -32,7 +31,7 @@ export function ExamUploadSection({ onQuestionsExtracted, onError }: ExamUploadS
     if (user) {
       loadUserData()
     }
-  }, [user])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUserData = async () => {
     if (!user) return

@@ -12,7 +12,6 @@ import { toast } from "sonner"
 interface WelcomePopupProps {
   isOpen: boolean
   onClose: () => void
-  onUpgrade: (tier: 'basic' | 'pro' | 'pro+') => void
 }
 
 const plans = [
@@ -91,7 +90,7 @@ const plans = [
   }
 ]
 
-export function WelcomePopup({ isOpen, onClose, onUpgrade }: WelcomePopupProps) {
+export function WelcomePopup({ isOpen, onClose }: WelcomePopupProps) {
   const [selectedPlan, setSelectedPlan] = useState<'free' | 'basic' | 'pro' | 'pro+' | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const { user } = useAuth()
@@ -249,7 +248,7 @@ export function WelcomePopup({ isOpen, onClose, onUpgrade }: WelcomePopupProps) 
             onClick={handleContinueFree}
             className="text-muted-foreground hover:text-foreground"
           >
-            Skip for now - I'll decide later
+            Skip for now - I&apos;ll decide later
           </Button>
         </div>
       </DialogContent>

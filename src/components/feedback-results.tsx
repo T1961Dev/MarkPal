@@ -4,10 +4,9 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FeedbackHighlighter } from "./feedback-highlighter";
-import { CheckCircle, AlertCircle, XCircle, Eye, EyeOff, Trophy, Target, MessageSquare } from "lucide-react";
+import { Eye, EyeOff, Trophy, Target, MessageSquare } from "lucide-react";
 
 interface FeedbackResult {
   score: number;
@@ -91,7 +90,6 @@ export function FeedbackResults({ result, onReset }: FeedbackResultsProps) {
         <CardContent className="space-y-4">
           <div className="rounded-xl bg-gray-50 p-4">
             <FeedbackHighlighter 
-              text={result.feedback} 
               highlights={result.highlights} 
             />
           </div>

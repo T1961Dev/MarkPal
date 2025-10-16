@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface FeedbackHighlight {
@@ -10,13 +9,10 @@ interface FeedbackHighlight {
 }
 
 interface FeedbackHighlighterProps {
-  text: string;
   highlights: FeedbackHighlight[];
 }
 
-export function FeedbackHighlighter({ text, highlights }: FeedbackHighlighterProps) {
-  const [highlightedText, setHighlightedText] = useState<string>(text);
-
+export function FeedbackHighlighter({ highlights }: FeedbackHighlighterProps) {
   const getHighlightColor = (type: string) => {
     switch (type) {
       case "correct":

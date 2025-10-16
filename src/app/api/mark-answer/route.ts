@@ -201,7 +201,7 @@ Please mark this answer and provide detailed feedback.`
       
       markingResult = JSON.parse(cleanResponse);
     } catch (parseError) {
-      console.error('Failed to parse OpenAI response:', responseText);
+      console.error('Failed to parse OpenAI response:', parseError, responseText);
       throw new Error('Failed to parse marking results');
     }
 

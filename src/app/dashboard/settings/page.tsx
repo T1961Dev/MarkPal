@@ -10,13 +10,13 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { 
-  Settings, 
   User, 
   Download,
   Trash2,
   Save,
   Eye,
-  EyeOff
+  EyeOff,
+  Shield
 } from "lucide-react"
 import { getUser, User as UserType, updateUserProfile, supabase } from "@/lib/supabase"
 import { toast } from "sonner"
@@ -25,7 +25,7 @@ import { PricingPopup } from "@/components/pricing-popup"
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
   const [userData, setUserData] = useState<UserType | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [pricingPopupOpen, setPricingPopupOpen] = useState(false)
@@ -40,7 +40,7 @@ export default function SettingsPage() {
     if (user) {
       loadUserData()
     }
-  }, [user])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadUserData = async () => {
     if (!user) return
