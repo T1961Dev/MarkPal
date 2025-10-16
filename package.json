@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "rimraf .next node_modules/.cache && next build",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
