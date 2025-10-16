@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
     }
     return `build-${Date.now()}`
   },
+  // Disable service worker registration
+  experimental: {
+    esmExternals: false,
+  },
   // Ensure proper asset handling
   trailingSlash: false,
   // Configure headers for static assets
