@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { 
   BookOpen, 
   Target,
@@ -33,7 +32,7 @@ export default function SavedQuestionDetailPage() {
     if (user && params.id) {
       loadQuestion()
     }
-  }, [user, params.id])
+  }, [user, params.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadQuestion = async () => {
     if (!user || !params.id) return
@@ -187,7 +186,7 @@ export default function SavedQuestionDetailPage() {
                     </div>
                     {!markSchemeExpanded && (
                       <div className="text-sm text-muted-foreground">
-                        Click "Show More" to see the full mark scheme
+                        Click &quot;Show More&quot; to see the full mark scheme
                       </div>
                     )}
                   </div>

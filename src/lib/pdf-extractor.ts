@@ -38,7 +38,7 @@ export class PDFTextExtractor {
           
           // Combine text items from the page
           const pageText = textContent.items
-            .filter((item: any) => item.str)
+            .filter((item: any) => item.str && typeof item.str === 'string')
             .map((item: any) => item.str)
             .join(' ')
             .replace(/\s+/g, ' ') // Normalize whitespace

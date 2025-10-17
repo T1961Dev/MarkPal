@@ -15,7 +15,6 @@ import {
   CheckCircle,
   AlertCircle,
   XCircle,
-  Calendar,
   ArrowLeft,
   FileText,
   Award,
@@ -40,7 +39,7 @@ export default function SavedQuestionPage() {
     if (user && params.id) {
       loadQuestion()
     }
-  }, [user, params.id])
+  }, [user, params.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadQuestion = async () => {
     if (!user || !params.id) return
@@ -136,7 +135,7 @@ export default function SavedQuestionPage() {
       <DashboardLayout>
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Question Not Found</h1>
-          <p className="text-muted-foreground mb-4">The question you're looking for doesn't exist or has been deleted.</p>
+          <p className="text-muted-foreground mb-4">The question you&apos;re looking for doesn&apos;t exist or has been deleted.</p>
           <Button onClick={() => router.push('/dashboard/saved-questions')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Saved Questions

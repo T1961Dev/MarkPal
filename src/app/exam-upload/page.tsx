@@ -5,7 +5,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { ExamUploadSection } from "@/components/exam-upload-section"
 import { PricingPopup } from "@/components/pricing-popup"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useState, useEffect } from "react"
 import { getUser, User as UserType } from "@/lib/supabase"
 
@@ -43,7 +43,7 @@ export default function ExamUploadPage() {
 
         {/* Exam Upload Section */}
         <ExamUploadSection 
-          onQuestionsExtracted={(questions, fullText, metadata) => {
+          onQuestionsExtracted={(questions) => {
             console.log('Questions extracted:', questions)
           }}
           onError={(error) => {

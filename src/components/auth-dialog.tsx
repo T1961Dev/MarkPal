@@ -79,7 +79,7 @@ export function AuthDialog({ isOpen, onClose }: AuthDialogProps) {
         onClose()
         signInForm.reset()
       }
-    } catch (err) {
+    } catch (_err: unknown) {
       setError("An unexpected error occurred")
     } finally {
       setLoading(false)
@@ -98,7 +98,7 @@ export function AuthDialog({ isOpen, onClose }: AuthDialogProps) {
         onClose()
         signUpForm.reset()
       }
-    } catch (err) {
+    } catch (_err: unknown) {
       setError("An unexpected error occurred")
     } finally {
       setLoading(false)

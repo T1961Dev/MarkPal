@@ -1,43 +1,39 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['pdf-parse', 'pdf2json'],
-  // Use stable build ID for production
+  output: "standalone",               // ✅ top-level, not inside generateBuildId
+  serverExternalPackages: ["pdf-parse", "pdf2json"],
+  trailingSlash: false,
+
   generateBuildId: async () => {
-    if (process.env.NODE_ENV === 'production') {
-      return 'production-build'
+    if (process.env.NODE_ENV === "production") {
+      return "production-build"
     }
     return `build-${Date.now()}`
   },
-  // Disable service worker registration
-  experimental: {
-    esmExternals: false,
-  },
-  // Ensure proper asset handling
-  trailingSlash: false,
-  // Configure headers for static assets
+
   async headers() {
     return [
       {
-        source: '/_next/static/(.*)',
+        source: "/_next/static/(.*)",
         headers: [
           {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
           },
         ],
       },
       {
-        source: '/(.*)',
+        source: "/(.*)",
         headers: [
           {
-            key: 'Cache-Control',
-            value: 'public, max-age=0, must-revalidate',
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
           },
         ],
       },
-    ];
+    ]
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig

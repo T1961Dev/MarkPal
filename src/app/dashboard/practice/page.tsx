@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import { 
   BookOpen, 
   Target, 
@@ -20,14 +19,9 @@ import {
   ArrowRight, 
   ArrowLeft,
   CheckCircle,
-  AlertCircle,
-  XCircle,
-  Loader2,
-  Eye,
   EyeOff,
   Save,
-  Brain,
-  Clock
+  Brain
 } from "lucide-react"
 import { QuestionBankLiveInput } from "@/components/question-bank-live-input"
 import { MarkSchemeDialog } from "@/components/mark-scheme-dialog"
@@ -71,7 +65,6 @@ function PracticeContent() {
   const [questionImage, setQuestionImage] = useState("")
   const [studentAnswerImage, setStudentAnswerImage] = useState("")
   const [markSchemeImage, setMarkSchemeImage] = useState("")
-  const [showMarkScheme, setShowMarkScheme] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [isAnimating, setIsAnimating] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -101,7 +94,6 @@ function PracticeContent() {
     const urlMarkScheme = searchParams.get('markScheme')
     const urlMaxScore = searchParams.get('maxScore')
     const urlStudentAnswer = searchParams.get('studentAnswer')
-    const urlVersionId = searchParams.get('versionId')
 
     // Only pre-fill if we have URL parameters (coming from improvement mode)
     if (urlQuestion || urlMarkScheme || urlMaxScore || urlStudentAnswer) {
@@ -368,7 +360,6 @@ function PracticeContent() {
       // Fast fallback analysis
       const answerLength = studentAnswer.length
       const questionLength = question.length
-      const markSchemeLength = markScheme.length
       
       // Simple scoring based on answer length and content
       const lengthScore = Math.min(maxMarks * 0.6, Math.floor(answerLength / 50))
@@ -529,7 +520,7 @@ function PracticeContent() {
           }
         } catch (error) {
           console.error('Error fetching original question:', error)
-          // Continue with provided name if we can't fetch the original
+          // Continue with provided name if we can&apos;t fetch the original
         }
       }
       
@@ -580,6 +571,7 @@ function PracticeContent() {
     }
   }
 
+  /* Unused component - keeping for potential future use
   const FeedbackHighlight = ({ text, type, tooltip }: { text: string; type: string; tooltip?: string }) => {
     const getHighlightClass = () => {
       switch (type) {
@@ -627,6 +619,7 @@ function PracticeContent() {
       </span>
     )
   }
+  */
 
   if (!user || loading) {
     return (
@@ -709,7 +702,7 @@ function PracticeContent() {
                   <div>
                     <h3 className="font-semibold text-blue-900">Improvement Mode</h3>
                     <p className="text-sm text-blue-700">
-                      You're improving a previous answer. {isLiveMode ? 'Live analysis is enabled - your score updates as you type.' : 'Enable live analysis for real-time feedback.'}
+                      You&apos;re improving a previous answer. {isLiveMode ? 'Live analysis is enabled - your score updates as you type.' : 'Enable live analysis for real-time feedback.'}
                     </p>
                   </div>
                 </div>

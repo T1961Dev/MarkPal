@@ -137,7 +137,7 @@ export function ImageUpload({
             className="h-10 w-10 p-0 text-primary border-primary hover:bg-primary hover:text-primary-foreground transition-colors shadow-md rounded-full flex items-center justify-center"
             title="Choose from gallery"
           >
-            <Image className="w-5 h-5" />
+            <Image className="w-5 h-5" /> {/* eslint-disable-line jsx-a11y/alt-text */}
           </Button>
         </div>
       )}

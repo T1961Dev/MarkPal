@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useDeviceRegistration } from "@/hooks/use-device-registration"
 import { Loader2, Mail, Lock, User, CheckCircle, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
+import Image from "next/image"
 
 export default function RegisterPage() {
   const [name, setName] = useState("")
@@ -85,10 +86,12 @@ export default function RegisterPage() {
         <Card className="border-2 border-primary/20 shadow-2xl">
           <CardHeader className="space-y-4 text-center">
             <div className="mx-auto flex items-center justify-center">
-              <img 
+              <Image 
                 src="/pics/logo.png" 
                 alt="Mark Pal Logo" 
-                className="w-16 h-16 object-contain"
+                width={64}
+                height={64}
+                className="object-contain"
               />
             </div>
             <div>

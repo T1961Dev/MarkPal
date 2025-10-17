@@ -90,11 +90,12 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({ url: session.url })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error creating checkout session:', err)
+    const error = err instanceof Error ? err : new Error('Unknown error')
     return NextResponse.json(
-      { error: err.message },
-      { status: err.statusCode || 500 }
+      { error: error.message },
+      { status: 500 }
     )
   }
 }

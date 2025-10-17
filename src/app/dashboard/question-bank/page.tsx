@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookOpen, Target, Search, Filter, ArrowRight, RefreshCw, Upload, FileText, Crown } from "lucide-react"
+import { BookOpen, Target, Search, Filter, RefreshCw, Upload, FileText } from "lucide-react"
 import Link from "next/link"
 import { QuestionBankCard } from "@/components/question-bank-card"
 import { ExamUploadSection } from "@/components/exam-upload-section"
@@ -119,14 +119,14 @@ function QuestionBankContent() {
   // Fetch questions based on filters
   useEffect(() => {
     fetchQuestions()
-  }, [filters])
+  }, [filters]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh questions when component mounts or user changes
   useEffect(() => {
     if (user) {
       fetchQuestions()
     }
-  }, [user])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh questions when page becomes visible (user navigates back)
   useEffect(() => {
@@ -138,7 +138,7 @@ function QuestionBankContent() {
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [user])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh questions when user completes a practice session
   useEffect(() => {
@@ -150,7 +150,7 @@ function QuestionBankContent() {
 
     window.addEventListener('questionsUsed', handleQuestionsUsed)
     return () => window.removeEventListener('questionsUsed', handleQuestionsUsed)
-  }, [user])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchQuestions = async () => {
     try {
@@ -251,7 +251,7 @@ function QuestionBankContent() {
     } catch (error) {
       console.error('Error fetching batch attempt statuses:', error)
       // Set default empty statuses to prevent individual API calls
-      const defaultStatuses: Record<string, any> = {}
+      const defaultStatuses: Record<string, { hasAttempted: boolean; attemptCount: number }> = {}
       questionIds.forEach(id => {
         defaultStatuses[id] = { hasAttempted: false, attemptCount: 0 }
       })
@@ -342,7 +342,7 @@ function QuestionBankContent() {
 
             <TabsContent value="upload" className="space-y-6">
               <ExamUploadSection 
-                onQuestionsExtracted={(questions, fullText, metadata) => {
+                onQuestionsExtracted={(questions) => {
                   // Handle extracted questions
                   console.log('Questions extracted:', questions)
                   // Refresh papers list after successful upload
@@ -523,7 +523,7 @@ function QuestionBankContent() {
           <div>
             <h2 className="text-2xl font-bold">My Uploaded Papers</h2>
             <p className="text-muted-foreground mt-2">
-              Papers you've uploaded and their extracted questions
+              Papers you&apos;ve uploaded and their extracted questions
             </p>
           </div>
           <Button 

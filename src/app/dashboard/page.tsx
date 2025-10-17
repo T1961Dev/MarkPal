@@ -109,7 +109,8 @@ export default function Dashboard() {
     setWelcomePopupOpen(false)
   }
 
-  const handleWelcomeUpgrade = (_tier: 'basic' | 'pro' | 'pro+') => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleWelcomeUpgrade = () => {
     // Close welcome popup and open pricing popup
     setWelcomePopupOpen(false)
     setPricingPopupOpen(true)

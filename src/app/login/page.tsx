@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2, Mail, Lock } from "lucide-react"
 import { toast } from "sonner"
+import Image from "next/image"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -39,7 +40,7 @@ export default function LoginPage() {
         toast.success("Welcome back!")
         router.push("/dashboard")
       }
-    } catch (err) {
+    } catch (_err: unknown) {
       setError("An unexpected error occurred")
       toast.error("Login failed. Please try again.")
     } finally {
@@ -65,10 +66,12 @@ export default function LoginPage() {
         <Card className="border-2 border-primary/20 shadow-2xl">
           <CardHeader className="space-y-4 text-center">
             <div className="mx-auto flex items-center justify-center">
-              <img 
+              <Image 
                 src="/pics/logo.png" 
                 alt="Mark Pal Logo" 
-                className="w-16 h-16 object-contain"
+                width={64}
+                height={64}
+                className="object-contain"
               />
             </div>
             <div>
@@ -140,7 +143,7 @@ export default function LoginPage() {
 
             <div className="mt-6 text-center">
               <p className="text-muted-foreground">
-                Don't have an account?{" "}
+                Don&apos;t have an account?{" "}
                 <Link 
                   href="/register" 
                   className="text-primary hover:text-primary/80 font-medium transition-colors"

@@ -124,7 +124,7 @@ async function updateUserSubscription(userId: string, tier: string, customerId?:
     const newQuestionsLeft = Math.max(0, currentQuestionsLeft + additionalQuestions)
 
     // Update user tier and questions left
-    const updateData: any = {
+    const updateData: { tier: string; questionsLeft: number; questions_reset_date: string; stripe_customer_id?: string } = {
       tier: tier,
       questionsLeft: newQuestionsLeft,
       questions_reset_date: new Date().toISOString()

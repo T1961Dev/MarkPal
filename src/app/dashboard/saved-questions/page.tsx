@@ -16,12 +16,9 @@ import {
   Award,
   Eye,
   Trash2,
-  ArrowRight,
-  Clock,
-  TrendingUp
 } from "lucide-react"
 import Link from "next/link"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useRouter } from "next/navigation"
 
 interface SavedQuestion {
   id: string
@@ -54,7 +51,6 @@ interface SavedQuestion {
 
 function SavedQuestionsContent() {
   const { user } = useAuth()
-  const searchParams = useSearchParams()
   const router = useRouter()
   const [savedQuestions, setSavedQuestions] = useState<SavedQuestion[]>([])
   const [loading, setLoading] = useState(true)
@@ -64,14 +60,8 @@ function SavedQuestionsContent() {
     if (user) {
       fetchSavedQuestions()
     }
-  }, [user])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Add a refresh function for when questions are updated
-  const refreshSavedQuestions = () => {
-    if (user) {
-      fetchSavedQuestions()
-    }
-  }
 
 
   const fetchSavedQuestions = async () => {

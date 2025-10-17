@@ -119,7 +119,7 @@ CRITICAL: Return ONLY valid JSON. No markdown, no explanations, no additional te
 
     // Clean up and validate each question
     const cleanedQuestions = extractedQuestions
-      .map((q: any, index: number) => ({
+      .map((q: { id?: string; questionNumber?: string; text?: string; marks?: string | number; type?: string }, index: number) => ({
         id: q.id || `question-${index + 1}`,
         questionNumber: q.questionNumber || (index + 1).toString(),
         text: q.text?.trim() || '',

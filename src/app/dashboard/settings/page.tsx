@@ -98,9 +98,10 @@ export default function SettingsPage() {
       } else {
         toast.success("Profile updated successfully!")
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving profile:', error)
-      toast.error(error.message || "Failed to update profile. Please try again.")
+      const errorMessage = error instanceof Error ? error.message : "Failed to update profile. Please try again."
+      toast.error(errorMessage)
     } finally {
       setSaving(false)
     }
@@ -138,9 +139,10 @@ export default function SettingsPage() {
       setConfirmPassword("")
       
       toast.success("Password updated successfully!")
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error changing password:', error)
-      toast.error(error.message || "Failed to update password. Please try again.")
+      const errorMessage = error instanceof Error ? error.message : "Failed to update password. Please try again."
+      toast.error(errorMessage)
     } finally {
       setSaving(false)
     }
@@ -184,9 +186,10 @@ export default function SettingsPage() {
       
       toast.success("Account deleted successfully")
       await signOut()
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting account:', error)
-      toast.error(error.message || "Failed to delete account. Please contact support.")
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete account. Please contact support."
+      toast.error(errorMessage)
     } finally {
       setSaving(false)
     }
@@ -241,9 +244,10 @@ export default function SettingsPage() {
       URL.revokeObjectURL(url)
       
       toast.success("Data exported successfully!")
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error exporting data:', error)
-      toast.error(error.message || "Failed to export data. Please try again.")
+      const errorMessage = error instanceof Error ? error.message : "Failed to export data. Please try again."
+      toast.error(errorMessage)
     }
   }
 
